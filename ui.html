@@ -1,0 +1,1439 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WA Transfer</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@300;400;500&family=Syne+Mono&display=swap" rel="stylesheet">
+<style>
+/* ── Reset + Root ─────────────────────────────────────────────────────────── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#070B14;--bg1:#0C1220;--bg2:#111827;--bg3:#1A2332;
+  --bd:rgba(255,255,255,.06);--bd2:rgba(255,255,255,.1);--bd3:rgba(255,255,255,.16);
+  --tl:#00D9A0;--tl2:#00B584;--tl3:rgba(0,217,160,.08);--tl4:rgba(0,217,160,.15);
+  --am:#FFB547;--am2:rgba(255,181,71,.08);--am3:rgba(255,181,71,.15);
+  --bl:#7EB8FF;--bl2:rgba(126,184,255,.08);--bl3:rgba(126,184,255,.15);
+  --er:#FF4D6D;--er2:rgba(255,77,109,.08);--er3:rgba(255,77,109,.15);
+  --tx:#F0F4FF;--tx2:#8B9FC0;--tx3:#4A5A78;--tx4:#2A3550;
+  --f1:'Syne',sans-serif;--f2:'IBM Plex Mono',monospace;
+  --r:8px;--r2:12px;--r3:16px;
+}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-family:var(--f1)}
+
+/* ── Background grid ──────────────────────────────────────────────────────── */
+.bg-grid{position:fixed;inset:0;z-index:0;pointer-events:none;
+  background-image:linear-gradient(rgba(0,217,160,.025) 1px,transparent 1px),
+                   linear-gradient(90deg,rgba(0,217,160,.025) 1px,transparent 1px);
+  background-size:48px 48px}
+.bg-glow{position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:radial-gradient(ellipse 60% 40% at 20% 0%,rgba(0,217,160,.04) 0%,transparent 60%),
+             radial-gradient(ellipse 40% 60% at 90% 90%,rgba(126,184,255,.04) 0%,transparent 60%)}
+
+/* ── Shell ────────────────────────────────────────────────────────────────── */
+.shell{position:relative;z-index:1;display:grid;grid-template-columns:260px 1fr;height:100vh}
+
+/* ── Sidebar ──────────────────────────────────────────────────────────────── */
+.sb{display:flex;flex-direction:column;background:rgba(10,14,24,.85);
+  border-right:1px solid var(--bd);backdrop-filter:blur(32px);overflow:hidden}
+
+.sb-logo{padding:28px 24px 20px;border-bottom:1px solid var(--bd);flex-shrink:0}
+.logo-row{display:flex;align-items:center;gap:12px;margin-bottom:4px}
+.logo-mark{width:36px;height:36px;background:linear-gradient(135deg,var(--tl),var(--tl2));
+  border-radius:10px;display:flex;align-items:center;justify-content:center;
+  font-family:var(--f2);font-size:11px;font-weight:500;color:#000;flex-shrink:0;
+  box-shadow:0 0 20px rgba(0,217,160,.25),inset 0 1px 0 rgba(255,255,255,.2)}
+.logo-name{font-size:18px;font-weight:800;letter-spacing:-.03em;color:var(--tx)}
+.logo-ver{font-size:9px;font-family:var(--f2);color:var(--tx3);
+  background:var(--bg2);padding:2px 7px;border-radius:4px;margin-left:4px}
+.logo-sub{font-size:10px;color:var(--tx3);font-family:var(--f2);letter-spacing:.04em}
+
+.sb-status{padding:12px 24px;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:10px;flex-shrink:0}
+.pulse{width:7px;height:7px;border-radius:50%;background:var(--tx4);flex-shrink:0;transition:all .3s}
+.pulse.live{background:var(--tl);box-shadow:0 0 10px rgba(0,217,160,.5);animation:pulseAnim 2s infinite}
+.pulse.error{background:var(--er);box-shadow:0 0 10px rgba(255,77,109,.4)}
+.pulse.warn{background:var(--am);animation:blinkAnim 1s infinite}
+.stxt{font-size:10px;font-family:var(--f2);color:var(--tx2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* ── Steps nav ────────────────────────────────────────────────────────────── */
+.sb-nav{flex:1;padding:16px 0;overflow-y:auto}
+.sb-nav::-webkit-scrollbar{width:0}
+.nav-lbl{padding:12px 24px 4px;font-size:8px;font-family:var(--f2);
+  letter-spacing:.2em;color:var(--tx4);text-transform:uppercase}
+
+.step-item{display:flex;align-items:flex-start;gap:0;padding:0 24px;
+  cursor:pointer;position:relative;margin-bottom:2px}
+.step-item::before{content:'';position:absolute;left:37px;top:32px;
+  width:1px;height:calc(100% + 2px);background:var(--tx4);opacity:.3;z-index:0}
+.step-item:last-child::before{display:none}
+.step-num{width:26px;height:26px;border-radius:50%;border:1.5px solid var(--tx4);
+  display:flex;align-items:center;justify-content:center;font-family:var(--f2);
+  font-size:9px;color:var(--tx4);flex-shrink:0;margin-top:10px;transition:all .3s;
+  background:var(--bg);position:relative;z-index:1}
+.step-txt{padding:8px 0 8px 12px;flex:1}
+.step-name{font-size:12px;font-weight:600;color:var(--tx3);margin-bottom:2px;transition:color .3s}
+.step-desc{font-size:10px;color:var(--tx4);font-family:var(--f2);font-weight:300}
+
+.step-item.active .step-num{border-color:var(--tl);color:var(--tl);
+  background:rgba(0,217,160,.08);box-shadow:0 0 12px rgba(0,217,160,.2)}
+.step-item.active .step-name{color:var(--tx)}
+.step-item.active .step-desc{color:var(--tx2)}
+.step-item.done .step-num{border-color:var(--tl2);background:var(--tl2);
+  color:#000;font-size:10px}
+.step-item.done .step-num::after{content:'✓'}
+.step-item.done .step-num span{display:none}
+.step-item.done .step-name{color:var(--tl2)}
+.step-item.done::before{background:var(--tl2);opacity:.4}
+
+/* ── Sidebar threads ──────────────────────────────────────────────────────── */
+.sb-threads{padding:16px 24px;border-top:1px solid var(--bd);flex-shrink:0}
+.threads-lbl{font-size:8px;font-family:var(--f2);letter-spacing:.2em;
+  color:var(--tx4);text-transform:uppercase;margin-bottom:12px}
+.thr{display:flex;align-items:center;gap:8px;margin-bottom:7px;opacity:.2;transition:opacity .4s}
+.thr.active{opacity:1}
+.thr.done{opacity:.6}
+.thr-dot{width:5px;height:5px;border-radius:50%;background:var(--tx4);flex-shrink:0;transition:all .3s}
+.thr.active .thr-dot{background:var(--tl);animation:blinkAnim 1.2s infinite;box-shadow:0 0 6px rgba(0,217,160,.5)}
+.thr.done .thr-dot{background:var(--tl2)}
+.thr.error .thr-dot{background:var(--er)}
+.thr-bar{flex:1;height:2px;background:rgba(255,255,255,.04);border-radius:2px;overflow:hidden}
+.thr-fill{height:100%;width:0%;background:linear-gradient(90deg,var(--tl2),var(--tl));
+  border-radius:2px;transition:width .8s cubic-bezier(.4,0,.2,1)}
+.thr.done .thr-fill{background:var(--tl2)}
+.thr.error .thr-fill{background:var(--er)}
+.thr-name{font-size:9px;font-family:var(--f2);color:var(--tx4);min-width:48px;
+  text-align:right;font-weight:300}
+.thr.active .thr-name{color:var(--tl)}
+
+.sb-safety{padding:10px 24px;border-top:1px solid var(--bd);
+  display:none;align-items:center;gap:8px;flex-shrink:0}
+.sb-safety.on{display:flex}
+.safety-txt{font-size:9px;font-family:var(--f2);color:var(--tx3);line-height:1.6}
+
+.sb-foot{padding:12px 24px;border-top:1px solid var(--bd);flex-shrink:0}
+.foot-row{display:flex;align-items:center;gap:6px;font-size:9px;font-family:var(--f2);
+  color:var(--tx4);line-height:2}
+.foot-dot{width:5px;height:5px;border-radius:50%;background:var(--tl);
+  flex-shrink:0;box-shadow:0 0 6px rgba(0,217,160,.3)}
+
+/* ── Main ─────────────────────────────────────────────────────────────────── */
+.main{display:flex;flex-direction:column;overflow:hidden;min-height:0}
+
+.topbar{height:48px;background:rgba(10,14,24,.8);border-bottom:1px solid var(--bd);
+  backdrop-filter:blur(32px);display:flex;align-items:center;padding:0 32px;
+  gap:12px;flex-shrink:0}
+.tb-path{font-family:var(--f2);font-size:10px;color:var(--tx3);font-weight:300}
+.tb-path span{color:var(--tx2)}
+.tb-sp{flex:1}
+.tb-badge{display:flex;align-items:center;gap:6px;padding:4px 10px;border-radius:20px;
+  border:1px solid var(--bd);font-family:var(--f2);font-size:9px;color:var(--tx3);
+  transition:all .25s;cursor:default;letter-spacing:.04em}
+.tb-badge.ok{border-color:rgba(0,217,160,.25);color:var(--tl);background:rgba(0,217,160,.04)}
+.tb-badge.er{border-color:rgba(255,77,109,.25);color:var(--er);background:rgba(255,77,109,.04)}
+.tb-badge .bdi{width:5px;height:5px;border-radius:50%;background:currentColor}
+
+.content{flex:1;overflow-y:auto;padding:36px 40px;min-height:0}
+.content::-webkit-scrollbar{width:3px}
+.content::-webkit-scrollbar-thumb{background:var(--bg3);border-radius:2px}
+
+/* ── Panels ───────────────────────────────────────────────────────────────── */
+.panel{display:none}
+.panel.on{display:block;animation:panelIn .3s cubic-bezier(.4,0,.2,1)}
+@keyframes panelIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── Typography ───────────────────────────────────────────────────────────── */
+.eyebrow{font-family:var(--f2);font-size:9px;letter-spacing:.2em;
+  color:var(--tl2);text-transform:uppercase;margin-bottom:8px;font-weight:400}
+.ptitle{font-size:34px;font-weight:800;letter-spacing:-.04em;line-height:1.1;margin-bottom:8px}
+.ptitle em{font-style:normal;color:var(--tl)}
+.psub{font-size:13px;color:var(--tx2);line-height:1.8;margin-bottom:28px;
+  max-width:520px;font-weight:400}
+
+/* ── Cards ────────────────────────────────────────────────────────────────── */
+.card{background:var(--bg1);border:1px solid var(--bd);border-radius:var(--r3);
+  padding:22px 26px;margin-bottom:14px;position:relative;overflow:hidden;
+  transition:border-color .25s}
+.card:hover{border-color:var(--bd2)}
+.card::after{content:'';position:absolute;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.06),transparent)}
+.card-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.card-label{font-family:var(--f2);font-size:9px;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--tx3)}
+.card-action{background:none;border:none;color:var(--tx3);cursor:pointer;
+  font-size:12px;padding:4px 8px;border-radius:6px;transition:all .2s;font-family:var(--f2)}
+.card-action:hover{color:var(--tx);background:rgba(255,255,255,.05)}
+
+/* ── Info/Warning boxes ───────────────────────────────────────────────────── */
+.ibox{display:flex;gap:12px;padding:14px 16px;border-radius:var(--r2);
+  font-size:12px;color:var(--tx2);line-height:1.8;margin:14px 0;font-weight:400}
+.ibox.teal{background:var(--tl3);border:1px solid rgba(0,217,160,.12)}
+.ibox.amber{background:var(--am2);border:1px solid rgba(255,181,71,.12);color:var(--am)}
+.ibox.blue{background:var(--bl2);border:1px solid rgba(126,184,255,.12);color:var(--bl)}
+.ibox code{font-family:var(--f2);font-size:10px;background:rgba(0,0,0,.3);
+  padding:2px 7px;border-radius:4px;color:var(--tl)}
+
+/* ── Step list ────────────────────────────────────────────────────────────── */
+.step-list{display:flex;flex-direction:column;gap:0}
+.sli{display:flex;gap:14px;padding:16px 0;border-bottom:1px solid var(--bd);align-items:flex-start}
+.sli:last-child{border-bottom:none;padding-bottom:0}
+.sli:first-child{padding-top:0}
+.sli-n{width:28px;height:28px;border-radius:var(--r);background:var(--tl3);
+  border:1px solid rgba(0,217,160,.2);display:flex;align-items:center;justify-content:center;
+  font-family:var(--f2);font-size:9px;color:var(--tl);flex-shrink:0;margin-top:2px;font-weight:500}
+.sli-title{font-size:13px;font-weight:600;margin-bottom:3px}
+.sli-desc{font-size:12px;color:var(--tx2);line-height:1.8;font-weight:400}
+.sli-desc code{font-family:var(--f2);font-size:10px;background:rgba(0,217,160,.06);
+  border:1px solid rgba(0,217,160,.1);padding:2px 7px;border-radius:5px;color:var(--tl)}
+.sli-desc b{color:var(--tx);font-weight:600}
+.warn-tag{display:inline-block;font-size:10px;color:var(--am);
+  background:var(--am2);border:1px solid rgba(255,181,71,.15);
+  padding:3px 10px;border-radius:5px;font-family:var(--f2);margin-top:6px}
+
+/* ── Buttons ──────────────────────────────────────────────────────────────── */
+.btn{display:inline-flex;align-items:center;gap:8px;padding:11px 22px;
+  border-radius:var(--r);font-family:var(--f1);font-size:12px;font-weight:600;
+  cursor:pointer;border:1px solid transparent;transition:all .2s;white-space:nowrap;
+  letter-spacing:.01em}
+.btn-primary{background:linear-gradient(135deg,var(--tl),var(--tl2));color:#000;
+  box-shadow:0 4px 20px rgba(0,217,160,.2),inset 0 1px 0 rgba(255,255,255,.2)}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 8px 30px rgba(0,217,160,.3)}
+.btn-primary:disabled{background:var(--bg3);border-color:var(--bd);
+  color:var(--tx3);cursor:not-allowed;transform:none;box-shadow:none}
+.btn-ghost{background:rgba(255,255,255,.03);color:var(--tx2);border-color:var(--bd2)}
+.btn-ghost:hover{border-color:var(--bd3);color:var(--tx);background:rgba(255,255,255,.06)}
+.btn-danger{background:rgba(255,77,109,.08);border-color:rgba(255,77,109,.2);color:var(--er)}
+.btn-danger:hover{background:rgba(255,77,109,.14);border-color:rgba(255,77,109,.35)}
+.btn-row{display:flex;gap:10px;margin-top:24px;align-items:center;flex-wrap:wrap}
+
+/* ── Devices list ─────────────────────────────────────────────────────────── */
+.dev-list{display:flex;flex-direction:column;gap:8px}
+.dev-card{display:flex;align-items:center;gap:14px;padding:16px 18px;
+  border:1px solid var(--bd);border-radius:var(--r2);cursor:pointer;
+  transition:all .2s;background:var(--bg2)}
+.dev-card:hover{border-color:var(--bd2);transform:translateY(-1px)}
+.dev-card.sel{border-color:rgba(0,217,160,.35);background:var(--tl3);
+  box-shadow:0 0 0 1px rgba(0,217,160,.1)}
+.dev-ico{width:44px;height:44px;background:linear-gradient(135deg,var(--bg3),var(--bg2));
+  border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
+.dev-name{font-size:14px;font-weight:600;margin-bottom:3px}
+.dev-meta{font-size:11px;color:var(--tx2);font-family:var(--f2)}
+.dev-serial{font-family:var(--f2);font-size:9px;color:var(--tx3)}
+.dev-sel-badge{display:none;font-size:8px;color:var(--tl);
+  background:rgba(0,217,160,.1);border:1px solid rgba(0,217,160,.2);
+  padding:3px 10px;border-radius:20px;letter-spacing:.08em;font-family:var(--f2)}
+.dev-card.sel .dev-sel-badge{display:block}
+.dev-empty{text-align:center;padding:36px 20px}
+.dev-empty-ico{font-size:36px;margin-bottom:12px}
+.dev-empty-txt{font-size:12px;color:var(--tx3);line-height:1.8;font-family:var(--f2)}
+
+/* ── Form inputs ──────────────────────────────────────────────────────────── */
+.field{margin-bottom:14px}
+.field-label{font-family:var(--f2);font-size:8px;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--tx3);margin-bottom:6px;display:block}
+.field-sub{font-family:var(--f2);font-size:8px;color:var(--tx4);margin-left:6px}
+input[type=email],input[type=password],input[type=tel]{
+  width:100%;padding:11px 14px;background:rgba(255,255,255,.03);
+  border:1px solid var(--bd2);border-radius:var(--r);color:var(--tx);
+  font-size:12px;font-family:var(--f2);outline:none;transition:border-color .2s;
+  caret-color:var(--tl)}
+input:focus{border-color:rgba(0,217,160,.35);background:rgba(0,217,160,.02)}
+input::placeholder{color:var(--tx4)}
+
+/* ── Upload fields ────────────────────────────────────────────────────────── */
+.upload-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:6px}
+.upill{font-family:var(--f2);font-size:9px;padding:4px 12px;
+  border-radius:20px;border:1px solid var(--bd);color:var(--tx3);transition:all .25s}
+.upill.ok{border-color:rgba(0,217,160,.3);color:var(--tl);background:rgba(0,217,160,.06)}
+.upill.er{border-color:rgba(255,77,109,.3);color:var(--er);background:rgba(255,77,109,.06)}
+.upill.wa{border-color:rgba(255,181,71,.3);color:var(--am);background:rgba(255,181,71,.06)}
+.media-bar{height:3px;background:rgba(255,255,255,.04);border-radius:3px;
+  margin-top:6px;overflow:hidden;display:none}
+.media-bar.on{display:block}
+.media-bar-fill{height:100%;width:0%;background:linear-gradient(90deg,var(--tl2),var(--tl));
+  border-radius:3px;transition:width .3s}
+
+/* ── Tabs ─────────────────────────────────────────────────────────────────── */
+.tabs{display:flex;gap:4px;background:rgba(255,255,255,.025);
+  border:1px solid var(--bd);border-radius:10px;padding:4px;margin-bottom:20px}
+.tab{flex:1;padding:9px 12px;border-radius:7px;border:none;background:none;
+  color:var(--tx3);font-family:var(--f2);font-size:10px;cursor:pointer;
+  transition:all .2s;text-align:center;letter-spacing:.04em}
+.tab.active{background:rgba(0,217,160,.06);color:var(--tl);
+  border:1px solid rgba(0,217,160,.15)}
+.tab-content{display:none}
+.tab-content.on{display:block}
+
+/* ── Key guide ────────────────────────────────────────────────────────────── */
+.key-guide{background:var(--bl2);border:1px solid rgba(126,184,255,.1);
+  border-radius:var(--r2);overflow:hidden;margin-bottom:14px}
+.kg-hd{padding:12px 16px;cursor:pointer;display:flex;justify-content:space-between;
+  align-items:center;transition:background .2s}
+.kg-hd:hover{background:rgba(255,255,255,.02)}
+.kg-title{font-family:var(--f2);font-size:9px;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--bl)}
+.kg-arr{font-size:12px;color:var(--tx3);transition:transform .25s}
+.kg-arr.open{transform:rotate(90deg)}
+.kg-body{display:none;padding:0 16px 14px;font-size:11px;color:var(--tx2);
+  line-height:2;font-family:var(--f2)}
+.kg-body.open{display:block;animation:panelIn .2s ease}
+.kg-method{margin-bottom:10px;padding:10px 12px;background:rgba(255,255,255,.02);
+  border-radius:7px;border:1px solid var(--bd)}
+.kg-m-title{font-size:9px;color:var(--tx3);margin-bottom:5px;
+  display:flex;align-items:center;gap:8px}
+.m-badge{font-size:8px;background:rgba(0,217,160,.08);color:var(--tl);
+  border:1px solid rgba(0,217,160,.15);padding:2px 8px;border-radius:4px}
+.m-badge.hard{background:var(--am2);color:var(--am);border-color:rgba(255,181,71,.2)}
+.kg-body code{background:rgba(0,0,0,.4);padding:2px 7px;border-radius:4px;color:var(--tl)}
+
+/* ── GDrive card ──────────────────────────────────────────────────────────── */
+.gdrive-card{background:var(--bl2);border:1px solid rgba(126,184,255,.1);
+  border-radius:var(--r3);padding:20px 24px;margin-bottom:14px}
+.gdrive-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.gdrive-title{font-family:var(--f2);font-size:9px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--bl)}
+
+/* ── Progress screen ──────────────────────────────────────────────────────── */
+.prog-hero{margin-bottom:24px;position:relative}
+.prog-numbers{display:flex;align-items:flex-end;gap:24px;margin-bottom:8px;flex-wrap:wrap}
+.big-pct{font-size:80px;font-weight:800;letter-spacing:-.06em;line-height:1;
+  background:linear-gradient(135deg,var(--tx) 40%,var(--tl));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  transition:all .5s;filter:drop-shadow(0 0 30px rgba(0,217,160,.1))}
+.big-pct .punit{font-size:28px;opacity:.4;font-weight:400;
+  -webkit-text-fill-color:var(--tx3)}
+.time-stack{display:flex;gap:20px}
+.time-item{display:flex;flex-direction:column;gap:3px}
+.time-lbl{font-family:var(--f2);font-size:8px;color:var(--tx4);
+  letter-spacing:.16em;text-transform:uppercase}
+.time-val{font-size:24px;font-weight:700;letter-spacing:-.03em;
+  color:var(--tx2);transition:color .3s;line-height:1}
+.time-val.active{color:var(--tl)}
+.prog-msg{font-size:11px;color:var(--tx2);font-family:var(--f2);
+  min-height:16px;margin:10px 0}
+.prog-track{height:3px;background:rgba(255,255,255,.05);border-radius:3px;
+  margin:14px 0;position:relative;overflow:hidden}
+.prog-fill{height:100%;background:linear-gradient(90deg,var(--tl2),var(--tl));
+  background-size:200% 100%;animation:shimmer 3s linear infinite;
+  border-radius:3px;width:0%;transition:width .8s cubic-bezier(.4,0,.2,1);
+  position:relative}
+.prog-fill::after{content:'';position:absolute;right:0;top:-4px;
+  width:12px;height:12px;border-radius:50%;background:var(--tl);
+  box-shadow:0 0 16px var(--tl),0 0 32px rgba(0,217,160,.3);transition:opacity .3s}
+.prog-fill.done{background:var(--tl2);animation:none}
+.prog-fill.done::after{opacity:0}
+.prog-fill.err{background:var(--er);animation:none}
+.prog-fill.err::after{background:var(--er);box-shadow:0 0 12px var(--er)}
+
+/* ── Phase pills ──────────────────────────────────────────────────────────── */
+.phases{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:20px}
+.phase{background:var(--bg1);border:1px solid var(--bd);border-radius:var(--r2);
+  padding:14px 10px;text-align:center;transition:all .3s;position:relative;overflow:hidden}
+.phase::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;
+  background:rgba(255,255,255,.04);transition:all .3s}
+.phase.active{border-color:rgba(0,217,160,.2);background:rgba(0,217,160,.04)}
+.phase.active::after{background:var(--tl);box-shadow:0 0 10px rgba(0,217,160,.3);
+  animation:phaseAnim 1.5s infinite}
+.phase.done{border-color:rgba(0,217,160,.15)}
+.phase.done::after{background:var(--tl2);animation:none}
+.phase.error{border-color:rgba(255,77,109,.15);background:rgba(255,77,109,.03)}
+.phase.error::after{background:var(--er);animation:none}
+.ph-ico{font-size:20px;margin-bottom:6px}
+.ph-name{font-size:8px;font-family:var(--f2);color:var(--tx4);line-height:1.5}
+.phase.active .ph-name{color:var(--tl)}
+.phase.done .ph-name{color:var(--tl2)}
+.phase.error .ph-name{color:var(--er)}
+
+/* ── Terminal ─────────────────────────────────────────────────────────────── */
+.term-wrap{display:grid;grid-template-columns:1fr 320px;gap:12px;align-items:start}
+.term{background:#030508;border:1px solid var(--bd);border-radius:var(--r2);overflow:hidden}
+.term-hd{display:flex;align-items:center;gap:6px;padding:10px 16px;
+  border-bottom:1px solid var(--bd);background:rgba(255,255,255,.015)}
+.term-dots{display:flex;gap:5px}
+.term-dot{width:9px;height:9px;border-radius:50%}
+.term-dot:nth-child(1){background:#FF5F57}
+.term-dot:nth-child(2){background:#FFBD2E}
+.term-dot:nth-child(3){background:#28C840}
+.term-title{font-family:var(--f2);font-size:10px;color:var(--tx4);margin-left:6px}
+.term-live{margin-left:auto;font-family:var(--f2);font-size:9px;color:var(--tl);
+  opacity:0;transition:opacity .3s;display:flex;align-items:center;gap:5px}
+.term-live.on{opacity:1}
+.term-live::before{content:'';width:5px;height:5px;border-radius:50%;
+  background:var(--tl);animation:blinkAnim 1s infinite}
+.term-body{height:248px;overflow-y:auto;padding:12px 16px;
+  font-family:var(--f2);font-size:10px;line-height:2.1}
+.term-body::-webkit-scrollbar{width:2px}
+.term-body::-webkit-scrollbar-thumb{background:var(--bg3)}
+.ll{display:flex;gap:10px;opacity:0;animation:llIn .2s ease forwards}
+@keyframes llIn{from{opacity:0;transform:translateX(-4px)}to{opacity:1;transform:translateX(0)}}
+.ll-ts{color:var(--tx4);flex-shrink:0;font-size:9px;min-width:36px}
+.ll-msg{color:var(--tx2)}
+.ll.ok .ll-msg,.ll.pass .ll-msg{color:var(--tl)}
+.ll.fail .ll-msg,.ll.er .ll-msg{color:var(--er)}
+.ll.warn .ll-msg,.ll.wa .ll-msg{color:var(--am)}
+.ll.info .ll-msg{color:var(--bl)}
+.caret{display:inline-block;width:6px;height:12px;background:var(--tl);
+  animation:blinkAnim .7s step-end infinite;vertical-align:text-bottom;
+  margin-left:2px;border-radius:1px}
+
+/* ── Tests panel ──────────────────────────────────────────────────────────── */
+.tests{background:var(--bg1);border:1px solid var(--bd);border-radius:var(--r2);overflow:hidden}
+.tests-hd{display:flex;align-items:center;justify-content:space-between;
+  padding:10px 16px;border-bottom:1px solid var(--bd)}
+.tests-title{font-family:var(--f2);font-size:9px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--tx3)}
+.tests-summary{display:flex;gap:10px}
+.ts{font-family:var(--f2);font-size:10px}
+.ts.pass{color:var(--tl2)}.ts.warn{color:var(--am)}.ts.fail{color:var(--er)}
+.test-list{height:248px;overflow-y:auto}
+.test-list::-webkit-scrollbar{width:2px}
+.test-list::-webkit-scrollbar-thumb{background:var(--bg3)}
+.ti{padding:10px 16px;border-bottom:1px solid var(--bd);cursor:pointer;
+  transition:background .15s;opacity:0;animation:llIn .2s ease forwards}
+.ti:last-child{border-bottom:none}
+.ti:hover{background:rgba(255,255,255,.015)}
+.ti.exp{background:rgba(255,255,255,.025)}
+.ti-row{display:flex;align-items:center;gap:10px}
+.ti-badge{width:18px;height:18px;border-radius:6px;display:flex;align-items:center;
+  justify-content:center;font-size:8px;font-weight:500;font-family:var(--f2);flex-shrink:0}
+.ti-badge.pass{background:rgba(0,217,160,.08);color:var(--tl2);
+  border:1px solid rgba(0,217,160,.2)}
+.ti-badge.warn{background:var(--am2);color:var(--am);
+  border:1px solid rgba(255,181,71,.2)}
+.ti-badge.fail{background:var(--er2);color:var(--er);
+  border:1px solid rgba(255,77,109,.2)}
+.ti-badge.skip{background:rgba(255,255,255,.03);color:var(--tx4);border:1px solid var(--bd)}
+.ti-name{font-family:var(--f2);font-size:9px;color:var(--tx3);flex:1}
+.ti-msg{font-size:11px;color:var(--tx2);margin-top:2px}
+.ti-detail{display:none;margin-top:8px;padding:10px 12px;
+  background:rgba(255,255,255,.02);border-radius:7px;border:1px solid var(--bd)}
+.ti.exp .ti-detail{display:block}
+.ti-fix{font-size:11px;color:var(--am);line-height:1.7}
+.ti-fix::before{content:'→ Fix: ';color:var(--tx3)}
+.tests-empty{text-align:center;padding:36px;font-size:11px;color:var(--tx3);font-family:var(--f2)}
+
+/* ── Merge/Media viz ──────────────────────────────────────────────────────── */
+.merge-viz{display:none;grid-column:1/-1}
+.merge-viz.on{display:grid;grid-template-columns:1fr 36px 1fr;
+  gap:0;align-items:center;animation:panelIn .3s ease;margin-bottom:12px}
+.mv{background:var(--bg1);border:1px solid var(--bd);border-radius:var(--r2);
+  padding:16px 18px;text-align:center}
+.mv.android{border-color:rgba(0,217,160,.12)}
+.mv.iphone{border-color:rgba(126,184,255,.12)}
+.mv.result{grid-column:1/-1;margin-top:8px;
+  border-color:rgba(0,217,160,.12);background:rgba(0,217,160,.03)}
+.mv-lbl{font-family:var(--f2);font-size:8px;letter-spacing:.14em;
+  text-transform:uppercase;margin-bottom:8px;color:var(--tx3)}
+.mv.android .mv-lbl{color:var(--tl)}
+.mv.iphone .mv-lbl{color:var(--bl)}
+.mv.result .mv-lbl{color:var(--tl2)}
+.mv-num{font-size:28px;font-weight:800;line-height:1;letter-spacing:-.03em;margin-bottom:3px}
+.mv.android .mv-num{color:var(--tl)}
+.mv.iphone .mv-num{color:var(--bl)}
+.mv.result .mv-num{color:var(--tl2)}
+.mv-sub{font-size:10px;color:var(--tx3);font-family:var(--f2)}
+.mv-arrow{text-align:center;font-size:18px;color:var(--tx4)}
+
+.media-viz{display:none;grid-column:1/-1;margin-bottom:12px}
+.media-viz.on{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;animation:panelIn .3s ease}
+.mv2{background:var(--bg1);border:1px solid var(--bd);border-radius:var(--r2);
+  padding:14px 12px;text-align:center}
+.mv2-num{font-size:22px;font-weight:700;color:var(--tl);line-height:1;
+  margin-bottom:4px;letter-spacing:-.02em}
+.mv2-lbl{font-size:8px;font-family:var(--f2);color:var(--tx4);
+  text-transform:uppercase;letter-spacing:.1em}
+
+/* ── Detail card ──────────────────────────────────────────────────────────── */
+.detail-card{display:none;grid-column:1/-1;background:var(--bg1);
+  border:1px solid var(--bd);border-radius:var(--r2);padding:16px 20px;margin-bottom:8px}
+.detail-card.on{display:block;animation:panelIn .25s ease}
+.detail-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px}
+.detail-item{padding:10px 12px;background:rgba(255,255,255,.02);
+  border:1px solid var(--bd);border-radius:var(--r)}
+.detail-val{font-size:17px;font-weight:700;color:var(--tl);line-height:1;
+  margin-bottom:3px;letter-spacing:-.02em}
+.detail-val.am{color:var(--am)}.detail-val.bl{color:var(--bl)}.detail-val.safe{color:var(--tx2)}
+.detail-lbl{font-size:8px;font-family:var(--f2);color:var(--tx4);
+  text-transform:uppercase;letter-spacing:.1em}
+
+/* ── Error box ────────────────────────────────────────────────────────────── */
+.errbox{background:var(--er2);border:1px solid rgba(255,77,109,.15);
+  border-radius:var(--r2);padding:20px 24px}
+.err-title{font-size:16px;font-weight:700;color:var(--er);margin-bottom:10px}
+.err-body{font-size:12px;color:var(--tx2);line-height:1.8;white-space:pre-line;
+  margin-bottom:14px;font-family:var(--f2)}
+.err-fix{font-size:12px;color:var(--am);background:var(--am2);
+  border:1px solid rgba(255,181,71,.1);border-radius:8px;padding:12px 14px;
+  margin-bottom:14px;line-height:1.8}
+.err-fix::before{content:'💡 ';font-weight:600}
+
+/* ── Stats grid ───────────────────────────────────────────────────────────── */
+.stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px}
+.stat{background:var(--bg1);border:1px solid var(--bd);border-radius:var(--r2);
+  padding:18px;text-align:center;transition:all .3s}
+.stat:hover{border-color:var(--bd2);transform:translateY(-2px)}
+.stat-num{font-size:32px;font-weight:800;color:var(--tl);line-height:1;
+  margin-bottom:6px;letter-spacing:-.04em}
+.stat-lbl{font-size:8px;font-family:var(--f2);color:var(--tx4);
+  letter-spacing:.12em;text-transform:uppercase}
+
+/* ── Next steps ───────────────────────────────────────────────────────────── */
+.next-step{display:flex;gap:14px;align-items:flex-start;padding:14px 0;
+  border-bottom:1px solid var(--bd)}
+.next-step:last-child{border-bottom:none}
+.ns-num{width:24px;height:24px;border-radius:8px;
+  background:linear-gradient(135deg,var(--tl),var(--tl2));
+  color:#000;font-family:var(--f2);font-size:9px;font-weight:500;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  box-shadow:0 2px 8px rgba(0,217,160,.2)}
+.ns-txt{font-size:12px;color:var(--tx2);line-height:1.8}
+.ns-txt b{color:var(--tx);font-weight:600}
+
+/* ── ADB info ─────────────────────────────────────────────────────────────── */
+#adb-res{font-size:12px;color:var(--tx2);padding:12px 16px;background:rgba(255,255,255,.02);
+  border-radius:var(--r);border:1px solid var(--bd);line-height:1.8;font-family:var(--f2)}
+#adb-res.ok{border-color:rgba(0,217,160,.15);background:rgba(0,217,160,.03)}
+#adb-res.er{border-color:rgba(255,77,109,.15);background:rgba(255,77,109,.03)}
+
+/* ── Rollback card ────────────────────────────────────────────────────────── */
+#rollback-card{border-color:rgba(255,77,109,.12);background:rgba(255,77,109,.03);display:none}
+
+/* ── Animations ───────────────────────────────────────────────────────────── */
+@keyframes pulseAnim{0%{box-shadow:0 0 0 0 rgba(0,217,160,.4)}
+  70%{box-shadow:0 0 0 10px rgba(0,217,160,0)}100%{box-shadow:0 0 0 0 rgba(0,217,160,0)}}
+@keyframes blinkAnim{0%,100%{opacity:1}50%{opacity:.2}}
+@keyframes phaseAnim{0%,100%{opacity:1}50%{opacity:.3}}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+
+/* ── Proto modal ──────────────────────────────────────────────────────────── */
+#proto-modal{display:none;position:fixed;inset:0;z-index:100;
+  backdrop-filter:blur(16px);background:rgba(0,0,0,.6)}
+.proto-box{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  width:min(560px,90vw);background:rgba(10,14,24,.98);
+  border:1px solid var(--bd2);border-radius:18px;overflow:hidden;
+  box-shadow:0 24px 80px rgba(0,0,0,.5);backdrop-filter:blur(40px)}
+.proto-hd{padding:18px 24px;border-bottom:1px solid var(--bd);
+  display:flex;align-items:center;justify-content:space-between}
+.proto-title{font-family:var(--f2);font-size:9px;letter-spacing:.18em;
+  color:var(--tx3);text-transform:uppercase}
+.proto-close{background:none;border:none;color:var(--tx3);cursor:pointer;
+  font-size:20px;line-height:1;padding:4px;transition:color .2s}
+.proto-close:hover{color:var(--tx)}
+.proto-body{padding:20px 24px;max-height:65vh;overflow-y:auto;
+  font-family:var(--f2);font-size:11px;line-height:2.2;color:var(--tx2)}
+.proto-section{font-size:9px;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--tl);margin:16px 0 8px}
+.proto-section:first-child{margin-top:0}
+
+/* ── Mobile ───────────────────────────────────────────────────────────────── */
+.sb-toggle{display:none;position:fixed;bottom:20px;left:20px;z-index:10;
+  width:48px;height:48px;border-radius:14px;background:linear-gradient(135deg,var(--tl),var(--tl2));
+  border:none;color:#000;font-size:18px;cursor:pointer;align-items:center;justify-content:center;
+  box-shadow:0 4px 20px rgba(0,217,160,.3)}
+.sb-overlay{display:none;position:fixed;inset:0;z-index:4;
+  background:rgba(0,0,0,.6);backdrop-filter:blur(8px)}
+@media(max-width:768px){
+  .shell{grid-template-columns:1fr}
+  .sb{position:fixed;left:0;top:0;bottom:0;width:280px;z-index:5;
+    transform:translateX(-100%);transition:transform .3s}
+  .sb.open{transform:translateX(0)}
+  .sb-toggle{display:flex}.sb-overlay.open{display:block}
+  .topbar{padding:0 16px}.content{padding:20px 16px}
+  .phases{grid-template-columns:repeat(3,1fr)}
+  .term-wrap{grid-template-columns:1fr}
+  .stats-grid{grid-template-columns:repeat(2,1fr)}
+  .merge-viz.on{grid-template-columns:1fr 28px 1fr}
+  .media-viz.on{grid-template-columns:repeat(2,1fr)}
+  .big-pct{font-size:60px}
+}
+</style>
+</head>
+<body>
+<div class="bg-grid"></div>
+<div class="bg-glow"></div>
+
+<button class="sb-toggle" id="sb-toggle" onclick="toggleSb()">☰</button>
+<div class="sb-overlay" id="sb-overlay" onclick="toggleSb()"></div>
+
+<!-- Protocol modal -->
+<div id="proto-modal" onclick="if(event.target===this)toggleProto()">
+  <div class="proto-box">
+    <div class="proto-hd">
+      <div class="proto-title">Stack Protocolli v2.4</div>
+      <button class="proto-close" onclick="toggleProto()">×</button>
+    </div>
+    <div class="proto-body">
+      <div class="proto-section">Android → Mac</div>
+      <div><span style="color:var(--bl)">ADB</span> over USB — cascade 7 metodi</div>
+      <div style="color:var(--tx4);padding-left:14px">su root · run-as · Shizuku · adb backup · MIUI · scan sdcard · Google Drive</div>
+      <div class="proto-section">Crypt14/15</div>
+      <div><span style="color:var(--bl)">wa-crypt-tools</span> — decrypt14_15 CLI + Python API</div>
+      <div style="color:var(--tx4);padding-left:14px">Key extract cascade → decrypt → SQLite plain</div>
+      <div class="proto-section">iPhone → Mac</div>
+      <div><span style="color:var(--bl)">pymobiledevice3</span> — Lockdown + MobileBackup2</div>
+      <div style="color:var(--tx4);padding-left:14px">AFC · Manifest.db · NSKeyedArchiver plist blob</div>
+      <div class="proto-section">Merge v2.4</div>
+      <div><span style="color:var(--bl)">SQLite3</span> + CoreData — Transazionale + Media</div>
+      <div style="color:var(--tx4);padding-left:14px">Dedup ZMESSAGEID · Epoch 978307200 · WAL checkpoint · SHA1 media inject · ZLOCALPATH update · Rollback · Safety backup · Clean backup originale</div>
+    </div>
+  </div>
+</div>
+
+<div class="shell">
+<!-- ── Sidebar ───────────────────────────────────────────────────────────── -->
+<aside class="sb" id="sidebar">
+  <div class="sb-logo">
+    <div class="logo-row">
+      <div class="logo-mark">WA</div>
+      <div class="logo-name">Transfer <span class="logo-ver">v2.4</span></div>
+    </div>
+    <div class="logo-sub">Android → iOS · macOS · Auto</div>
+  </div>
+  <div class="sb-status">
+    <div class="pulse" id="pulse"></div>
+    <div class="stxt" id="sb-stxt">Inizializzazione...</div>
+  </div>
+  <nav class="sb-nav">
+    <div class="nav-lbl">Pipeline</div>
+    <div class="step-item active" id="nav-1" onclick="navClick(1)">
+      <div class="step-num"><span>1</span></div>
+      <div class="step-txt"><div class="step-name">Prerequisiti</div><div class="step-desc">ADB + debug USB</div></div>
+    </div>
+    <div class="step-item" id="nav-2" onclick="navClick(2)">
+      <div class="step-num"><span>2</span></div>
+      <div class="step-txt"><div class="step-name">Sorgente</div><div class="step-desc">Auto · DB · crypt14</div></div>
+    </div>
+    <div class="step-item" id="nav-3" onclick="navClick(3)">
+      <div class="step-num"><span>3</span></div>
+      <div class="step-txt"><div class="step-name">Checklist</div><div class="step-desc">Verifica finale</div></div>
+    </div>
+    <div class="step-item" id="nav-4" onclick="navClick(4)">
+      <div class="step-num"><span>4</span></div>
+      <div class="step-txt"><div class="step-name">Trasferimento</div><div class="step-desc">Pipeline live</div></div>
+    </div>
+    <div class="step-item" id="nav-5" onclick="navClick(5)">
+      <div class="step-num"><span>5</span></div>
+      <div class="step-txt"><div class="step-name">Completato</div><div class="step-desc">Resoconto finale</div></div>
+    </div>
+  </nav>
+  <div class="sb-threads">
+    <div class="threads-lbl">Threads</div>
+    <div class="thr" id="th-extract"><div class="thr-dot"></div><div class="thr-bar"><div class="thr-fill" id="th-extract-f"></div></div><div class="thr-name">extract</div></div>
+    <div class="thr" id="th-convert"><div class="thr-dot"></div><div class="thr-bar"><div class="thr-fill" id="th-convert-f"></div></div><div class="thr-name">convert</div></div>
+    <div class="thr" id="th-backup"><div class="thr-dot"></div><div class="thr-bar"><div class="thr-fill" id="th-backup-f"></div></div><div class="thr-name">backup</div></div>
+    <div class="thr" id="th-inject"><div class="thr-dot"></div><div class="thr-bar"><div class="thr-fill" id="th-inject-f"></div></div><div class="thr-name">inject</div></div>
+    <div class="thr" id="th-restore"><div class="thr-dot"></div><div class="thr-bar"><div class="thr-fill" id="th-restore-f"></div></div><div class="thr-name">restore</div></div>
+  </div>
+  <div class="sb-safety" id="sb-safety">
+    <div style="font-size:12px">🛡</div>
+    <div class="safety-txt" id="safety-txt">Backup sicurezza attivo</div>
+  </div>
+  <div class="sb-foot">
+    <div class="foot-row"><div class="foot-dot"></div>Locale · zero cloud</div>
+    <div class="foot-row" style="color:var(--tx4);margin-left:11px">Dati non escono dal Mac</div>
+  </div>
+</aside>
+
+<!-- ── Main ──────────────────────────────────────────────────────────────── -->
+<main class="main">
+  <div class="topbar">
+    <div class="tb-path">wa-transfer <span>/ <span id="tb-step">prerequisiti</span></span></div>
+    <div class="tb-sp"></div>
+    <div class="tb-badge" id="adb-badge"><div class="bdi"></div>ADB</div>
+    <div class="tb-badge" id="android-badge" style="display:none"></div>
+    <button onclick="toggleProto()" class="tb-badge" style="cursor:pointer" title="Stack protocolli">Protocol</button>
+  </div>
+
+  <div class="content">
+
+<!-- ══ STEP 1 ══ -->
+<div class="panel on" id="p1">
+  <div class="eyebrow">Step 01 / 05</div>
+  <div class="ptitle">Prima di <em>iniziare</em></div>
+  <div class="psub">Configura entrambi i dispositivi. I pre-flight check automatici verificheranno tutto.</div>
+  <div class="card">
+    <div class="card-hd"><div class="card-label">Android — Debug USB</div></div>
+    <div class="step-list">
+      <div class="sli"><div class="sli-n">01</div><div><div class="sli-title">Opzioni sviluppatore</div><div class="sli-desc">Impostazioni → Info telefono → tocca <b>Numero build</b> 7 volte</div></div></div>
+      <div class="sli"><div class="sli-n">02</div><div><div class="sli-title">Attiva Debug USB</div><div class="sli-desc">Opzioni sviluppatore → <b>Debug USB</b> → ON</div></div></div>
+      <div class="sli"><div class="sli-n">03</div><div><div class="sli-title">Collega e autorizza</div><div class="sli-desc">Cavo USB → tocca <b>"Consenti"</b> → spunta "Ricorda sempre"</div></div></div>
+      <div class="sli"><div class="sli-n">04</div><div><div class="sli-title">Backup locale WhatsApp</div><div class="sli-desc">WhatsApp → ⋮ → Impostazioni → Chat → <b>Backup → Esegui backup</b></div></div></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-hd"><div class="card-label">iPhone — Prepara</div></div>
+    <div class="step-list">
+      <div class="sli"><div class="sli-n">01</div><div><div class="sli-title">Disattiva "Trova il mio iPhone"</div><div class="sli-desc">Impostazioni → [nome] → Dov'è → <b>OFF</b></div><div class="warn-tag">⚠ Obbligatorio</div></div></div>
+      <div class="sli"><div class="sli-n">02</div><div><div class="sli-title">Backup non cifrato</div><div class="sli-desc">Finder → iPhone → deseleziona <b>"Cifra backup locale"</b></div></div></div>
+      <div class="sli"><div class="sli-n">03</div><div><div class="sli-title">Collega e autorizza</div><div class="sli-desc">Cavo USB → tocca <b>"Autorizza"</b></div></div></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-hd"><div class="card-label">Mac — ADB</div><button class="card-action" onclick="checkAdb()">↻ Verifica</button></div>
+    <div id="adb-res">Verifica in corso...</div>
+  </div>
+  <div class="btn-row">
+    <button class="btn btn-primary" onclick="go(2)">Continua →</button>
+    <button class="btn btn-ghost" onclick="checkAdb()">↻ Ricontrolla</button>
+  </div>
+</div>
+
+<!-- ══ STEP 2 ══ -->
+<div class="panel" id="p2">
+  <div class="eyebrow">Step 02 / 05</div>
+  <div class="ptitle">Seleziona <em>sorgente</em></div>
+  <div class="psub">L'app prova ADB automaticamente. Se fallisce, tenta Google Drive. Oppure importa manualmente.</div>
+  <div class="tabs">
+    <button class="tab active" id="mtab-auto" onclick="setMainTab('auto')">⚡ Automatico</button>
+    <button class="tab" id="mtab-manual" onclick="setMainTab('manual')">📂 Import manuale</button>
+  </div>
+
+  <!-- Auto -->
+  <div class="tab-content on" id="sec-adb">
+    <div class="ibox teal"><span>🤖</span><span>Cascade automatica: ADB (7 metodi) → Google Drive → fallback manuale. Zero configurazione.</span></div>
+    <div class="card">
+      <div class="card-hd"><div class="card-label">Android rilevato</div><button class="card-action" onclick="loadDevs()">↻</button></div>
+      <div id="dev-list"><div class="dev-empty"><div class="dev-empty-ico">📱</div><div class="dev-empty-txt">Scansione...</div></div></div>
+      <div id="sel-info" style="margin-top:10px;font-family:var(--f2);font-size:11px;color:var(--tl);min-height:14px"></div>
+    </div>
+    <div class="gdrive-card">
+      <div class="gdrive-hd">
+        <div class="gdrive-title">Google Drive — fallback automatico</div>
+        <span style="font-family:var(--f2);font-size:8px;color:var(--tx4);background:var(--bg2);padding:3px 10px;border-radius:20px;border:1px solid var(--bd)">se ADB fallisce</span>
+      </div>
+      <div style="font-size:12px;color:var(--tx2);line-height:1.8;margin-bottom:16px">
+        Usato automaticamente se ADB non riesce ad estrarre il DB.<br>
+        <b>App Password:</b> <a href="https://myaccount.google.com/apppasswords" target="_blank" style="color:var(--bl)">myaccount.google.com/apppasswords</a>
+      </div>
+      <div class="field">
+        <label class="field-label">Gmail account WhatsApp</label>
+        <input type="email" id="gdrive-email" placeholder="tuo@gmail.com" oninput="updateAutoBtn()">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="field">
+          <label class="field-label">App Password <span class="field-sub">(se 2FA attiva)</span></label>
+          <input type="password" id="gdrive-password" placeholder="xxxx xxxx xxxx xxxx" oninput="updateAutoBtn()">
+        </div>
+        <div class="field">
+          <label class="field-label">Numero telefono</label>
+          <input type="tel" id="gdrive-phone" placeholder="393331234567" oninput="updateAutoBtn()">
+        </div>
+      </div>
+    </div>
+    <div class="ibox teal"><span>🛡️</span><span>Google Drive viene contattato solo se ADB fallisce. Tutto rimane locale sul Mac.</span></div>
+    <div class="btn-row">
+      <button class="btn btn-ghost" onclick="go(1)">← Indietro</button>
+      <button class="btn btn-primary" id="btn-auto" onclick="startAutoTransfer()" disabled>⚡ Avvia automatico</button>
+    </div>
+  </div>
+
+  <!-- Manual -->
+  <div class="tab-content" id="sec-manual">
+    <div class="tabs" style="margin-bottom:16px">
+      <button class="tab active" id="stab-plain" onclick="setSubTab('plain')">📄 .db plain</button>
+      <button class="tab" id="stab-crypt14" onclick="setSubTab('crypt14')">🔐 .crypt14 + key</button>
+    </div>
+
+    <!-- Plain -->
+    <div class="tab-content on" id="sub-plain">
+      <div class="field">
+        <label class="field-label">msgstore.db — SQLite non cifrato</label>
+        <div class="upload-row">
+          <button class="btn btn-ghost" onclick="handleDBUpload()">📂 Seleziona file</button>
+          <span class="upill" id="upload-status">nessun file</span>
+        </div>
+      </div>
+      <div class="ibox teal"><span>💡</span><span>Path Android: <code>/sdcard/Android/media/com.whatsapp/WhatsApp/Databases/msgstore.db</code></span></div>
+    </div>
+
+    <!-- Crypt14 -->
+    <div class="tab-content" id="sub-crypt14">
+      <div class="key-guide">
+        <div class="kg-hd" onclick="toggleKg()">
+          <div class="kg-title">🗝 Come ottenere la key WhatsApp</div>
+          <div class="kg-arr" id="kg-arr">›</div>
+        </div>
+        <div class="kg-body" id="kg-body">
+          <div class="kg-method">
+            <div class="kg-m-title"><span class="m-badge">M1 — CONSIGLIATO</span> Google Drive pull</div>
+            <code>pip install wa-crypt-tools</code><br>
+            <code>python3 pull_wa_from_drive.py --email tuo@gmail.com</code><br>
+            → Produce <b>msgstore.db plain</b> → usa tab 📄
+          </div>
+          <div class="kg-method">
+            <div class="kg-m-title"><span class="m-badge hard">M2</span> adb backup (Android ≤ 9)</div>
+            <code>adb backup -noapk com.whatsapp -f wa.ab</code><br>
+            <code>java -jar abe.jar unpack wa.ab wa.tar</code>
+          </div>
+          <div class="kg-method">
+            <div class="kg-m-title"><span class="m-badge hard">M3</span> Shizuku</div>
+            <code>adb shell /data/local/tmp/.shizuku/rish</code><br>
+            <code>&gt; cp /data/data/com.whatsapp/files/key /sdcard/Download/</code>
+          </div>
+          <div style="font-size:10px;color:var(--tx4);margin-top:4px">Su MIUI 13+ usa <code>extract_wa_key.sh</code> per tutti i metodi in cascade.</div>
+        </div>
+      </div>
+      <div class="field">
+        <label class="field-label">File cifrato — msgstore.db.crypt14</label>
+        <div class="upload-row">
+          <button class="btn btn-ghost" onclick="handleCrypt14Upload()">🔐 Seleziona .crypt14</button>
+          <span class="upill" id="crypt14-status">nessun file</span>
+        </div>
+      </div>
+      <div class="field">
+        <label class="field-label">Chiave WhatsApp — file 'key' (~158 byte)</label>
+        <div class="upload-row">
+          <button class="btn btn-ghost" onclick="handleKeyUpload()">🗝 Seleziona key</button>
+          <span class="upill" id="key-status">nessun file</span>
+        </div>
+      </div>
+      <div class="ibox amber" id="crypt14-warn"><span>⚠</span><span id="crypt14-warn-txt">Carica entrambi i file per procedere.</span></div>
+    </div>
+
+    <!-- Media (common) -->
+    <div style="border-top:1px solid var(--bd);margin-top:14px;padding-top:14px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+        <span style="font-family:var(--f2);font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--tx3)">🖼 Media</span>
+        <span style="font-family:var(--f2);font-size:8px;background:var(--bg2);border:1px solid var(--bd);padding:2px 8px;border-radius:20px;color:var(--tx4)">opzionale</span>
+      </div>
+      <div style="font-size:12px;color:var(--tx2);line-height:1.8;margin-bottom:10px">
+        Zip della cartella <code style="font-family:var(--f2);font-size:10px;background:rgba(0,217,160,.06);border:1px solid rgba(0,217,160,.1);padding:2px 7px;border-radius:4px;color:var(--tl)">WhatsApp/Media</code> per trasferire foto, video, audio, documenti.
+      </div>
+      <div class="field">
+        <label class="field-label">Cartella media compressa</label>
+        <div class="upload-row">
+          <button class="btn btn-ghost" onclick="handleMediaUpload()">📦 Seleziona Media.zip</button>
+          <span class="upill" id="media-status">nessun file</span>
+        </div>
+        <div class="media-bar" id="media-bar"><div class="media-bar-fill" id="media-bar-fill"></div></div>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-ghost" onclick="go(1)">← Indietro</button>
+      <button class="btn btn-primary" id="btn-start-plain" onclick="startManualTransfer()" disabled style="display:none">▶ Avvia</button>
+      <button class="btn btn-primary" id="btn-start-crypt14" onclick="startCrypt14Transfer()" disabled style="display:none;background:linear-gradient(135deg,#7EB8FF,#4D94FF)">🔓 Decripta + Avvia</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ STEP 3 ══ -->
+<div class="panel" id="p3">
+  <div class="eyebrow">Step 03 / 05</div>
+  <div class="ptitle">Checklist <em>finale</em></div>
+  <div class="psub">Verifica rapida prima di avviare. Il trasferimento dura 10–30 minuti.</div>
+  <div class="ibox amber"><span>⚠</span><span>Non scollegare i dispositivi durante il trasferimento.</span></div>
+  <div class="card">
+    <div class="step-list">
+      <div class="sli"><div class="sli-n">✓</div><div><div class="sli-title">"Trova il mio iPhone" disattivato</div><div class="sli-desc">Impostazioni → [nome] → Dov'è → OFF</div></div></div>
+      <div class="sli"><div class="sli-n">✓</div><div><div class="sli-title">iPhone collegato via USB</div><div class="sli-desc">Cavo connesso, "Autorizza" accettato</div></div></div>
+      <div class="sli"><div class="sli-n">✓</div><div><div class="sli-title">Dispositivo Android pronto</div><div class="sli-desc" id="sel-confirm">Collegato e autorizzato</div></div></div>
+      <div class="sli"><div class="sli-n">✓</div><div><div class="sli-title">Batteria > 50%</div><div class="sli-desc">Entrambi i dispositivi in carica o sufficientemente carichi</div></div></div>
+    </div>
+  </div>
+  <div class="ibox teal"><span>🛡️</span><span><b>Merge sicuro:</b> copia integra del backup iPhone salvata prima di qualsiasi modifica. Rollback automatico in caso di errore.</span></div>
+  <div class="btn-row">
+    <button class="btn btn-ghost" onclick="go(2)">← Indietro</button>
+    <button class="btn btn-primary" onclick="startTransfer()">▶ Avvia Trasferimento</button>
+  </div>
+</div>
+
+<!-- ══ STEP 4 ══ -->
+<div class="panel" id="p4">
+  <div class="eyebrow">Step 04 / 05</div>
+  <div class="ptitle">Trasferimento <em>in corso</em></div>
+  <div class="psub">Dashboard live — chat, media e verifica automatica.</div>
+  <div class="prog-hero">
+    <div class="prog-numbers">
+      <div class="big-pct"><span id="big-num">0</span><span class="punit">%</span></div>
+      <div class="time-stack">
+        <div class="time-item" id="eta-box" style="display:none">
+          <div class="time-lbl">ETA</div>
+          <div class="time-val active" id="eta-val">—</div>
+        </div>
+        <div class="time-item">
+          <div class="time-lbl">Trascorso</div>
+          <div class="time-val" id="elapsed-val">00:00</div>
+        </div>
+      </div>
+    </div>
+    <div class="prog-msg" id="big-msg">Inizializzazione...</div>
+    <div class="prog-track"><div class="prog-fill" id="pfill"></div></div>
+  </div>
+
+  <div class="phases">
+    <div class="phase" id="ph1"><div class="ph-ico">📱</div><div class="ph-name">Estrazione<br>Android</div></div>
+    <div class="phase" id="ph2"><div class="ph-ico">🔄</div><div class="ph-name">Conversione<br>Database</div></div>
+    <div class="phase" id="ph3"><div class="ph-ico">💾</div><div class="ph-name">Backup<br>iPhone</div></div>
+    <div class="phase" id="ph4"><div class="ph-ico">💉</div><div class="ph-name">Merge +<br>Media</div></div>
+    <div class="phase" id="ph5"><div class="ph-ico">📲</div><div class="ph-name">Ripristino<br>iPhone</div></div>
+  </div>
+
+  <div class="detail-card" id="detail-card"><div class="detail-grid" id="detail-grid"></div></div>
+  <div class="merge-viz" id="merge-viz">
+    <div class="mv android"><div class="mv-lbl">Android</div><div class="mv-num" id="mv-android">—</div><div class="mv-sub" id="mv-android-sub">aggiunti</div></div>
+    <div class="mv-arrow">→</div>
+    <div class="mv iphone"><div class="mv-lbl">iPhone</div><div class="mv-num" id="mv-iphone">—</div><div class="mv-sub">preservati</div></div>
+    <div class="mv result"><div class="mv-lbl">Totale dopo merge</div><div class="mv-num" id="mv-result">—</div><div class="mv-sub" id="mv-result-sub"></div></div>
+  </div>
+  <div class="media-viz" id="media-viz">
+    <div class="mv2"><div class="mv2-num" id="mv2-files">—</div><div class="mv2-lbl">File media</div></div>
+    <div class="mv2"><div class="mv2-num" id="mv2-size">—</div><div class="mv2-lbl">MB trasferiti</div></div>
+    <div class="mv2"><div class="mv2-num" id="mv2-cov">—</div><div class="mv2-lbl">Copertura</div></div>
+    <div class="mv2"><div class="mv2-num" id="mv2-err">—</div><div class="mv2-lbl">Errori</div></div>
+  </div>
+
+  <div class="term-wrap">
+    <div class="term">
+      <div class="term-hd">
+        <div class="term-dots"><div class="term-dot"></div><div class="term-dot"></div><div class="term-dot"></div></div>
+        <div class="term-title">wa-transfer — log</div>
+        <div class="term-live" id="tlive">LIVE</div>
+      </div>
+      <div class="term-body" id="log-body">
+        <div class="ll info"><span class="ll-ts">00:00</span><span class="ll-msg">Pronto.<span class="caret"></span></span></div>
+      </div>
+    </div>
+    <div class="tests">
+      <div class="tests-hd">
+        <div class="tests-title">Test Results</div>
+        <div class="tests-summary">
+          <span class="ts pass" id="tc-pass">0 pass</span>
+          <span class="ts warn" id="tc-warn">0 warn</span>
+          <span class="ts fail" id="tc-fail">0 fail</span>
+        </div>
+      </div>
+      <div class="test-list" id="test-list"><div class="tests-empty">In attesa dei test...</div></div>
+    </div>
+    <div style="grid-column:1/-1" id="transfer-result"></div>
+  </div>
+</div>
+
+<!-- ══ STEP 5 ══ -->
+<div class="panel" id="p5">
+  <div class="eyebrow">Step 05 / 05</div>
+  <div class="ptitle">Trasferimento <em>completato</em> ✓</div>
+  <div class="psub">Chat e media trasferiti. Backup ripristinato sull'iPhone.</div>
+  <div id="backup-coverage" style="display:none;margin-bottom:14px"></div>
+  <div id="final-stats" class="stats-grid" style="display:none"></div>
+  <div id="rollback-card" class="card" style="display:none;border-color:rgba(255,77,109,.12);background:rgba(255,77,109,.03)">
+    <div class="card-hd"><div class="card-label" style="color:var(--er)">Backup originale disponibile</div><span id="clean-backup-size" style="font-family:var(--f2);font-size:9px;color:var(--tx4)"></span></div>
+    <div style="font-size:12px;color:var(--tx2);line-height:1.8;margin-bottom:14px">
+      Il backup iPhone <b>prima del trasferimento</b> è salvato sul Mac. Se qualcosa non va, ripristina con un click.
+    </div>
+    <button class="btn btn-danger" onclick="restoreOriginal()">↩ Ripristina stato pre-trasferimento</button>
+  </div>
+  <div class="card">
+    <div class="card-hd"><div class="card-label">Prossimi passi</div></div>
+    <div class="next-step"><div class="ns-num">1</div><div class="ns-txt">Attendi il <b>riavvio</b> dell'iPhone</div></div>
+    <div class="next-step"><div class="ns-num">2</div><div class="ns-txt"><b>App Store</b> → <b>WhatsApp</b> → installa</div></div>
+    <div class="next-step"><div class="ns-num">3</div><div class="ns-txt">Apri WhatsApp → inserisci il tuo <b>numero</b></div></div>
+    <div class="next-step"><div class="ns-num">4</div><div class="ns-txt">Se chiede iCloud → <b>"Salta"</b></div></div>
+    <div class="next-step"><div class="ns-num">5</div><div class="ns-txt">Chat e media Android <b>già presenti</b> ✓</div></div>
+    <div class="next-step"><div class="ns-num">6</div><div class="ns-txt">Riattiva <b>"Trova il mio iPhone"</b></div></div>
+  </div>
+  <div class="ibox teal"><span>💡</span><span>I media vengono indicizzati da WhatsApp gradualmente nelle prime ore.</span></div>
+  <div class="ibox teal"><span>🛡️</span><span>Backup DB originale in <code>temp/safety_backups/</code> · Copia backup completa in <code>temp/clean_backup/</code></span></div>
+  <div class="btn-row"><button class="btn btn-ghost" onclick="resetApp()">↺ Nuovo trasferimento</button></div>
+</div>
+
+  </div><!-- /content -->
+</main>
+</div><!-- /shell -->
+
+<script>
+// ── Pywebview bridge ──────────────────────────────────────────────────────
+// Tutti i metodi su window.pywebview.api restituiscono Promise.
+// Usare sempre await o .then().
+async function pwa(method, ...args) {
+  try {
+    return await window.pywebview.api[method](...args);
+  } catch(e) {
+    console.error('pwa error', method, e);
+    return null;
+  }
+}
+
+// ── State ─────────────────────────────────────────────────────────────────
+let step=1,selDev=null,pollTimer=null,logLines=[],lastLogCount=0,lastTestCount=0;
+let startTime=null,testResults=[],_pollErrors=0;
+let mainTab='auto',subTab='plain',manualDBPath=null;
+let crypt14Up=false,keyUp=false,mediaUp=false;
+const MAX_ERRS=10;
+const PHASES=[{id:'ph1',from:1,to:52,th:'extract'},{id:'ph2',from:53,to:68,th:'convert'},
+              {id:'ph3',from:69,to:84,th:'backup'},{id:'ph4',from:85,to:90,th:'inject'},
+              {id:'ph5',from:91,to:100,th:'restore'}];
+const LABELS=['prerequisiti','sorgente','checklist','trasferimento','completato'];
+
+// ── Navigation ────────────────────────────────────────────────────────────
+function toggleSb(){document.getElementById('sidebar').classList.toggle('open');document.getElementById('sb-overlay').classList.toggle('open')}
+function go(n){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'));
+  document.getElementById('p'+n).classList.add('on');
+  document.querySelectorAll('.step-item').forEach((el,i)=>{
+    el.classList.remove('active','done');
+    if(i+1<n)el.classList.add('done');
+  });
+  document.getElementById('nav-'+n).classList.add('active');
+  document.getElementById('tb-step').textContent=LABELS[n-1];
+  step=n;
+  if(n===2)loadDevs();
+  if(n===3&&selDev)document.getElementById('sel-confirm').textContent=selDev.model+' ('+selDev.serial+')';
+  if(n===5){setTimeout(()=>{loadCleanBackupInfo();buildFinalStats();},400)}
+  if(window.innerWidth<=768){document.getElementById('sidebar').classList.remove('open');document.getElementById('sb-overlay').classList.remove('open')}
+}
+function navClick(n){if(n<=step||n<=3)go(n)}
+
+// ── Tabs ──────────────────────────────────────────────────────────────────
+function setMainTab(t){
+  mainTab=t;
+  ['auto','manual'].forEach(x=>{
+    var el=document.getElementById('mtab-'+x);
+    if(el)el.classList.toggle('active',x===t);
+  });
+  document.getElementById('sec-adb').classList.toggle('on',t==='auto');
+  document.getElementById('sec-manual').classList.toggle('on',t==='manual');
+}
+function setSubTab(t){
+  subTab=t;
+  ['plain','crypt14'].forEach(x=>{
+    document.getElementById('stab-'+x).classList.toggle('active',x===t);
+    document.getElementById('sub-'+x).classList.toggle('on',x===t);
+  });
+  var bp=document.getElementById('btn-start-plain'),bc=document.getElementById('btn-start-crypt14');
+  if(bp)bp.style.display=t==='plain'?'inline-flex':'none';
+  if(bc)bc.style.display=t==='crypt14'?'inline-flex':'none';
+  updateManualBtns();
+}
+function toggleKg(){
+  document.getElementById('kg-body').classList.toggle('open');
+  document.getElementById('kg-arr').classList.toggle('open');
+}
+function updateAutoBtn(){
+  var email=(document.getElementById('gdrive-email')||{}).value||'';
+  var btn=document.getElementById('btn-auto');
+  if(btn)btn.disabled=!(selDev||email.trim());
+}
+function updateManualBtns(){
+  var bp=document.getElementById('btn-start-plain'),bc=document.getElementById('btn-start-crypt14');
+  var w=document.getElementById('crypt14-warn'),wt=document.getElementById('crypt14-warn-txt');
+  if(bp)bp.disabled=!manualDBPath;
+  if(bc)bc.disabled=!(crypt14Up&&keyUp);
+  if(subTab==='crypt14'&&w){
+    if(!crypt14Up&&!keyUp){w.style.display='flex';wt.textContent='Carica entrambi i file.'}
+    else if(!crypt14Up){w.style.display='flex';wt.textContent='Manca il .crypt14.'}
+    else if(!keyUp){w.style.display='flex';wt.textContent='Manca il file key.'}
+    else{w.style.display='none'}
+  }
+}
+function toggleProto(){var m=document.getElementById('proto-modal');m.style.display=m.style.display==='none'?'block':'none'}
+
+// ── ADB ───────────────────────────────────────────────────────────────────
+async function checkAdb(){
+  var res=document.getElementById('adb-res'),badge=document.getElementById('adb-badge'),pulse=document.getElementById('pulse'),sb=document.getElementById('sb-stxt');
+  res.className='';res.textContent='Verifica...';
+  var d=await pwa('get_status');
+  if(d&&d.adb){
+    pulse.className='pulse live';sb.textContent='ADB · '+d.device_count+' dispositivo/i';
+    badge.className='tb-badge ok';badge.innerHTML='<div class="bdi"></div>ADB ✓';
+    res.className='ok';res.textContent='✓ ADB trovato nel PATH.';
+  }else{
+    pulse.className='pulse error';sb.textContent='ADB non trovato';
+    badge.className='tb-badge er';badge.innerHTML='<div class="bdi"></div>ADB ✗';
+    res.className='er';res.innerHTML='✗ ADB non trovato.\n<code style="font-family:var(--f2);font-size:10px;color:var(--tl)">brew install android-platform-tools</code>';
+  }
+}
+async function loadDevs(){
+  var list=document.getElementById('dev-list');
+  list.innerHTML='<div class="dev-empty"><div style="font-size:28px;animation:blinkAnim 1s infinite">↻</div><div class="dev-empty-txt" style="margin-top:8px">Scansione dispositivi...</div></div>';
+  var devs=await pwa('get_devices');
+  if(!devs||!devs.length){
+    list.innerHTML='<div class="dev-empty"><div class="dev-empty-ico">📵</div><div class="dev-empty-txt">Nessun dispositivo rilevato.<br>Controlla USB e debug attivi.</div></div>';
+    return;
+  }
+  list.innerHTML='';
+  devs.forEach(dev=>{
+    var el=document.createElement('div');el.className='dev-card';
+    el.innerHTML=`<div class="dev-ico">📱</div><div style="flex:1"><div class="dev-name">${esc(dev.model)}</div><div class="dev-meta">Android ${esc(dev.android)} · WA ${esc(dev.whatsapp)}</div></div><div class="dev-serial">${esc(dev.serial)}</div><div class="dev-sel-badge">Selezionato</div>`;
+    el.onclick=()=>{
+      document.querySelectorAll('.dev-card').forEach(d=>d.classList.remove('sel'));
+      el.classList.add('sel');selDev=dev;
+      var si=document.getElementById('sel-info');
+      if(si)si.textContent='✓ '+dev.model+' selezionato';
+      updateAutoBtn();
+    };
+    list.appendChild(el);
+  });
+}
+
+// ── Uploads (dialog nativi via pywebview) ────────────────────────────────
+async function handleDBUpload(){
+  var pill=document.getElementById('upload-status');
+  pill.textContent='Selezione...';pill.className='upill wa';
+  var data=await pwa('pick_db');
+  if(data&&data.ok){
+    pill.textContent='✓ '+data.name+' ('+(data.size/1024/1024).toFixed(1)+' MB)';
+    pill.className='upill ok';manualDBPath=data.path;
+  }else{
+    var msg=(data&&data.error)||'Annullato';
+    if(msg==='Nessun file selezionato'){pill.textContent='nessun file';pill.className='upill';}
+    else{pill.textContent='✗ '+msg;pill.className='upill er';}
+    manualDBPath=null;
+  }
+  updateManualBtns();
+}
+async function handleCrypt14Upload(){
+  var pill=document.getElementById('crypt14-status');
+  pill.textContent='Selezione...';pill.className='upill wa';
+  var data=await pwa('pick_crypt14');
+  if(data&&data.ok){
+    pill.textContent='✓ '+(data.size/1024/1024).toFixed(1)+' MB';
+    pill.className='upill ok';crypt14Up=true;
+  }else{
+    var msg=(data&&data.error)||'Annullato';
+    if(msg==='Nessun file selezionato'){pill.textContent='nessun file';pill.className='upill';}
+    else{pill.textContent='✗ '+msg;pill.className='upill er';}
+    crypt14Up=false;
+  }
+  updateManualBtns();
+}
+async function handleKeyUpload(){
+  var pill=document.getElementById('key-status');
+  pill.textContent='Selezione...';pill.className='upill wa';
+  var data=await pwa('pick_key');
+  if(data&&data.ok){
+    pill.textContent='✓ '+data.size+' B';
+    pill.className='upill ok';keyUp=true;
+  }else{
+    var msg=(data&&data.error)||'Annullato';
+    if(msg==='Nessun file selezionato'){pill.textContent='nessun file';pill.className='upill';}
+    else{pill.textContent='✗ '+msg;pill.className='upill er';}
+    keyUp=false;
+  }
+  updateManualBtns();
+}
+async function handleMediaUpload(){
+  var pill=document.getElementById('media-status'),bar=document.getElementById('media-bar');
+  pill.textContent='Selezione...';pill.className='upill wa';bar.classList.add('on');
+  var data=await pwa('pick_media_zip');
+  bar.classList.remove('on');
+  if(data&&data.ok){
+    pill.textContent='✓ '+data.files.toLocaleString()+' file · '+data.size_mb+' MB';
+    pill.className='upill ok';mediaUp=true;
+  }else{
+    var msg=(data&&data.error)||'Annullato';
+    if(msg==='Nessun file selezionato'){pill.textContent='nessun file';pill.className='upill';}
+    else{pill.textContent='✗ '+msg;pill.className='upill er';}
+  }
+}
+
+// ── Pipeline starters ─────────────────────────────────────────────────────
+function _initUI(){
+  go(4);logLines=[];lastLogCount=0;lastTestCount=0;testResults=[];startTime=Date.now();_pollErrors=0;
+  window._bds=window._ips=window._ms=window._mds=false;
+  document.getElementById('transfer-result').innerHTML='';
+  document.getElementById('test-list').innerHTML='<div class="tests-empty">Inizializzazione...</div>';
+  document.getElementById('tlive').classList.add('on');
+  document.getElementById('detail-card').classList.remove('on');
+  document.getElementById('merge-viz').classList.remove('on');
+  var mv2=document.getElementById('media-viz');if(mv2)mv2.classList.remove('on');
+  PHASES.forEach(ph=>{
+    var r=document.getElementById('th-'+ph.th);if(r)r.className='thr';
+    var f=document.getElementById('th-'+ph.th+'-f');if(f)f.style.width='0%';
+  });
+  updateTC(0,0,0);
+}
+async function startAutoTransfer(){
+  var email=(document.getElementById('gdrive-email')||{}).value||'';
+  var pass=(document.getElementById('gdrive-password')||{}).value||'';
+  var phone=(document.getElementById('gdrive-phone')||{}).value||'';
+  if(!selDev&&!email.trim()){alert('Collega un dispositivo Android o inserisci la email Google.');return}
+  _initUI();
+  await pwa('start_auto', selDev?selDev.serial:'', email, pass, phone);
+  pollTimer=setInterval(poll,500);
+}
+async function startTransfer(){
+  _initUI();
+  await pwa('start', selDev.serial);
+  pollTimer=setInterval(poll,500);
+}
+async function startManualTransfer(){
+  if(!manualDBPath)return;
+  _initUI();
+  await pwa('start_uploaded');
+  pollTimer=setInterval(poll,500);
+}
+async function startCrypt14Transfer(){
+  if(!crypt14Up||!keyUp)return;
+  _initUI();
+  await pwa('start_crypt14');
+  pollTimer=setInterval(poll,500);
+}
+
+// ── Poll ──────────────────────────────────────────────────────────────────
+function elapsed(){
+  if(!startTime)return'00:00';
+  var s=Math.floor((Date.now()-startTime)/1000);
+  return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');
+}
+async function poll(){
+  var d=await pwa('get_progress');
+  if(!d){_pollErrors++;if(_pollErrors>=MAX_ERRS){clearInterval(pollTimer);document.getElementById('big-msg').textContent='Connessione persa';}return}
+  _pollErrors=0;
+  var pct=d.pct||0;
+  document.getElementById('big-num').textContent=pct;
+  document.getElementById('big-msg').textContent=d.msg||'';
+  var fill=document.getElementById('pfill');fill.style.width=pct+'%';
+  fill.classList.remove('done','err');
+  if(d.done)fill.classList.add('done');if(d.error)fill.classList.add('err');
+  document.getElementById('sb-stxt').textContent=d.msg||'';
+  // ETA
+  var etb=document.getElementById('eta-box'),etv=document.getElementById('eta-val');
+  if(d.eta!=null&&d.eta>0&&!d.done&&!d.error){
+    etb.style.display='flex';etv.textContent=fmtSec(d.eta);
+    etv.style.color=d.eta>600?'var(--er)':d.eta>180?'var(--am)':'var(--tl)';
+  }else if(d.done){etb.style.display='flex';etv.textContent='✓';etv.style.color='var(--tl)'}
+  else{etb.style.display='none'}
+  if(d.elapsed!=null)document.getElementById('elapsed-val').textContent=fmtSec(d.elapsed);
+  // Logs
+  if(d.log&&d.log.length>lastLogCount){
+    d.log.slice(lastLogCount).forEach(l=>{
+      if(!['pass','warn','fail','skip'].includes(l.type)){
+        var t=l.type||(l.msg.includes('ERRORE')?'fail':l.msg.includes('✓')?'ok':l.msg.includes('⚠')?'wa':'info');
+        logLines.push({msg:l.msg,type:t,ts:elapsed()});
+      }
+    });
+    lastLogCount=d.log.length;renderLog();
+  }
+  // Android stats
+  if(d.data?.android_stats&&!window._bds){
+    var as=d.data.android_stats;
+    if(as.backup_date){
+      window._bds=true;
+      var ab=document.getElementById('android-badge');
+      if(ab){ab.innerHTML='<div class="bdi"></div>'+as.backup_date;ab.style.display='flex';ab.className='tb-badge ok'}
+      showDetail({'Messaggi':{val:(as.messages||0).toLocaleString('it-IT'),cls:''},
+                  'Chat':{val:(as.chats||0).toLocaleString('it-IT'),cls:'bl'},
+                  'Media':{val:(as.media_messages||0).toLocaleString('it-IT'),cls:'bl'},
+                  'Dal':{val:as.first_message_date||'?',cls:'safe'},
+                  'Al':{val:as.last_message_date||'?',cls:'safe'},
+                  'Backup':{val:as.backup_date||'?',cls:'safe'}});
+    }
+  }
+  if(d.data?.iphone&&!window._ips){window._ips=true;var ip=d.data.iphone;logLines.push({msg:'iPhone: '+ip.name+' · iOS '+ip.ios,type:'info',ts:elapsed()});renderLog()}
+  // Merge stats
+  if(d.data?.merge_stats&&!window._ms){
+    window._ms=true;var ms=d.data.merge_stats;
+    document.getElementById('merge-viz').classList.add('on');
+    document.getElementById('mv-android').textContent='+'+(ms.inserted||0).toLocaleString('it-IT');
+    document.getElementById('mv-android-sub').textContent=(ms.new_chats||0)+' nuove chat';
+    document.getElementById('mv-iphone').textContent=(ms.iphone_before||0).toLocaleString('it-IT');
+    document.getElementById('mv-result').textContent=(ms.total_after||0).toLocaleString('it-IT');
+    document.getElementById('mv-result-sub').textContent=(ms.total_chats||0)+' chat · '+(ms.skipped||0)+' duplicati';
+    var ss=document.getElementById('sb-safety');if(ss)ss.classList.add('on');
+    document.getElementById('safety-txt').textContent='DB iPhone salvato';
+  }
+  // Media stats
+  if(d.data?.media_stats&&!window._mds){
+    var mds=d.data.media_stats;
+    if(!mds.skipped&&(mds.files||0)>0){
+      window._mds=true;
+      document.getElementById('media-viz').classList.add('on');
+      document.getElementById('mv2-files').textContent=(mds.files||0).toLocaleString('it-IT');
+      document.getElementById('mv2-size').textContent=(mds.size_mb||0);
+      var cov=mds.total_files>0?Math.round(mds.files/mds.total_files*100):100;
+      document.getElementById('mv2-cov').textContent=cov+'%';
+      document.getElementById('mv2-err').textContent=(mds.errors||0);
+    }
+  }
+  // Tests
+  if(d.tests&&d.tests.length>lastTestCount){
+    d.tests.slice(lastTestCount).forEach(t=>testResults.push(t));
+    lastTestCount=d.tests.length;renderTests();
+  }
+  updatePhases(pct,d.error);updateThreads(pct,d.error);
+  // Error
+  if(d.error){
+    clearInterval(pollTimer);document.getElementById('tlive').classList.remove('on');
+    document.getElementById('pulse').className='pulse error';
+    var hint=getHint(d.msg||'');
+    document.getElementById('transfer-result').innerHTML=
+      '<div class="errbox"><div class="err-title">✗ Errore</div><div class="err-body">'+esc(d.msg||'')+'</div>'+
+      (hint?'<div class="err-fix">'+esc(hint)+'</div>':'')+
+      '<div class="btn-row"><button class="btn btn-ghost" onclick="go(3)">← Riprova</button><button class="btn btn-ghost" onclick="go(1)">Prerequisiti</button></div></div>';
+  }
+  // Done
+  if(d.done){
+    clearInterval(pollTimer);document.getElementById('tlive').classList.remove('on');
+    document.getElementById('pulse').className='pulse live';
+    setTimeout(()=>go(5),600);
+  }
+}
+
+function showDetail(items){
+  var card=document.getElementById('detail-card'),grid=document.getElementById('detail-grid');
+  card.classList.add('on');
+  grid.innerHTML=Object.entries(items).map(([k,v])=>
+    `<div class="detail-item"><div class="detail-val ${v.cls||''}">${v.val}</div><div class="detail-lbl">${k}</div></div>`).join('');
+}
+function renderLog(){
+  var b=document.getElementById('log-body');
+  b.innerHTML=logLines.map((l,i)=>
+    `<div class="ll ${l.type}" style="animation-delay:${Math.min(i*8,150)}ms"><span class="ll-ts">${l.ts}</span><span class="ll-msg">${esc(l.msg)}</span></div>`
+  ).join('')+'<div class="ll"><span class="ll-ts">&nbsp;</span><span class="ll-msg"><span class="caret"></span></span></div>';
+  b.scrollTop=b.scrollHeight;
+}
+function renderTests(){
+  var list=document.getElementById('test-list');
+  if(!testResults.length){list.innerHTML='<div class="tests-empty">Nessun test</div>';updateTC(0,0,0);return}
+  var pass=testResults.filter(t=>t.status==='pass').length,warn=testResults.filter(t=>t.status==='warn').length,fail=testResults.filter(t=>t.status==='fail').length;
+  updateTC(pass,warn,fail);
+  var icons={pass:'✓',warn:'⚠',fail:'✗',skip:'·'};
+  list.innerHTML=testResults.map((t,i)=>
+    `<div class="ti" id="ti-${i}" onclick="toggleTest(${i})" style="animation-delay:${Math.min(i*15,250)}ms">
+      <div class="ti-row">
+        <div class="ti-badge ${t.status}">${icons[t.status]||'?'}</div>
+        <div style="flex:1;min-width:0"><div class="ti-name">${esc(t.name)}</div><div class="ti-msg">${esc(t.message)}</div></div>
+        ${(t.detail||t.fix)?'<div style="font-size:10px;color:var(--tx4);font-family:var(--f2)">›</div>':''}
+      </div>
+      ${(t.detail||t.fix)?`<div class="ti-detail">${t.detail?`<div style="font-size:10px;color:var(--tx3);font-family:var(--f2)">${esc(t.detail)}</div>`:''}${t.fix?`<div class="ti-fix">${esc(t.fix)}</div>`:''}</div>`:''}
+    </div>`).join('');
+  list.scrollTop=list.scrollHeight;
+}
+function toggleTest(i){document.getElementById('ti-'+i)?.classList.toggle('exp')}
+function updateTC(p,w,f){document.getElementById('tc-pass').textContent=p+' pass';document.getElementById('tc-warn').textContent=w+' warn';document.getElementById('tc-fail').textContent=f+' fail'}
+function updatePhases(pct,err){
+  PHASES.forEach(ph=>{
+    var el=document.getElementById(ph.id);el.classList.remove('active','done','error');
+    if(err&&pct>=ph.from&&pct<ph.to)el.classList.add('error');
+    else if(pct>=ph.to)el.classList.add('done');
+    else if(pct>=ph.from)el.classList.add('active');
+  });
+}
+function updateThreads(pct,err){
+  PHASES.forEach(ph=>{
+    var row=document.getElementById('th-'+ph.th),fill=document.getElementById('th-'+ph.th+'-f');
+    if(!row)return;
+    var prog=0,cls='thr';
+    if(pct>=ph.to){prog=100;cls=err?'thr error':'thr done'}
+    else if(pct>=ph.from){prog=Math.round((pct-ph.from)/(ph.to-ph.from)*100);cls=err?'thr error':'thr active'}
+    row.className=cls;fill.style.width=prog+'%';
+  });
+}
+function getHint(msg){
+  if(msg.includes('Android 10')||msg.includes('Impossibile'))return'WhatsApp → Impostazioni → Chat → Backup → Esegui backup. Poi riprova.';
+  if(msg.includes('pymobiledevice'))return'pip install pymobiledevice3';
+  if(msg.includes('Autorizza')||msg.includes('PairingError'))return'Scollega/ricollega iPhone, sblocca display, tocca "Autorizza".';
+  if(msg.includes("Dov'è")||msg.includes('FindMy'))return"Impostazioni → [nome] → Dov'è → OFF";
+  if(msg.includes('spazio'))return'Libera almeno 2 GB su disco.';
+  if(msg.includes('key')||msg.includes('crypt'))return'La key non corrisponde al crypt14. Verifica di usare la key corretta.';
+  return '';
+}
+
+// ── Final stats ───────────────────────────────────────────────────────────
+function buildFinalStats(){
+  var d=null;
+  pwa('get_progress').then(p=>{
+    if(!p)return;
+    var st=p.data?.android_stats||{},ms=p.data?.merge_stats||{},mds=p.data?.media_stats||{};
+    var m=Math.round((Date.now()-startTime)/60000);
+    var sg=document.getElementById('final-stats');sg.style.display='grid';
+    sg.innerHTML=
+      `<div class="stat"><div class="stat-num">${(ms.total_after||st.messages||0).toLocaleString('it-IT')}</div><div class="stat-lbl">Messaggi</div></div>`+
+      `<div class="stat"><div class="stat-num">${(ms.total_chats||st.chats||0).toLocaleString('it-IT')}</div><div class="stat-lbl">Chat</div></div>`+
+      `<div class="stat"><div class="stat-num">${m||'<1'}</div><div class="stat-lbl">Minuti</div></div>`+
+      `<div class="stat" style="border-color:rgba(0,217,160,.12)"><div class="stat-num" style="font-size:22px;color:var(--tl)">+${(ms.inserted||0).toLocaleString('it-IT')}</div><div class="stat-lbl">Da Android</div></div>`+
+      `<div class="stat"><div class="stat-num" style="font-size:22px;color:var(--tx3)">${(ms.skipped||0).toLocaleString('it-IT')}</div><div class="stat-lbl">Duplicati</div></div>`+
+      `<div class="stat" style="border-color:rgba(126,184,255,.12)"><div class="stat-num" style="font-size:22px;color:var(--bl)">${ms.new_chats||0}</div><div class="stat-lbl">Chat nuove</div></div>`;
+    if((mds.files||0)>0){
+      var cov=mds.total_files>0?Math.round(mds.files/mds.total_files*100):100;
+      sg.innerHTML+=`<div class="stat" style="grid-column:1/-1;border-color:rgba(0,217,160,.1);background:rgba(0,217,160,.02)"><div class="stat-num" style="font-size:18px">🖼 ${mds.files.toLocaleString('it-IT')} media · ${mds.size_mb} MB</div><div class="stat-lbl">Copertura ${cov}% · ${mds.errors||0} errori</div></div>`;
+    }
+    if((ms.iphone_before||0)>0){
+      sg.innerHTML+=`<div class="stat" style="grid-column:1/-1;border-color:rgba(0,217,160,.12);background:rgba(0,217,160,.02)"><div class="stat-num" style="font-size:18px;color:var(--tl2)">🛡️ ${ms.iphone_before.toLocaleString('it-IT')} messaggi iPhone preservati</div><div class="stat-lbl">Merge sicuro · rollback disponibile</div></div>`;
+    }
+    var bc=document.getElementById('backup-coverage');
+    if(bc&&(st.backup_date||st.last_message_date)){
+      bc.style.display='block';
+      bc.innerHTML=`<div class="ibox teal"><span>📅</span><span>Backup Android <b>${st.backup_date||'N/D'}</b> · Dal <b>${st.first_message_date||'?'}</b> al <b>${st.last_message_date||'?'}</b></span></div>`;
+    }
+  });
+}
+
+// ── Rollback ──────────────────────────────────────────────────────────────
+async function loadCleanBackupInfo(){
+  var d=await pwa('get_clean_backup_info');
+  var card=document.getElementById('rollback-card');
+  if(d&&d.available&&card){
+    card.style.display='block';
+    var sz=document.getElementById('clean-backup-size');
+    if(sz)sz.textContent=(d.size_mb||'?')+' MB · iOS '+(d.ios||'?');
+  }
+}
+async function restoreOriginal(){
+  if(!confirm('Ripristinare l\'iPhone allo stato ORIGINALE (prima del trasferimento WA)?\n\nQuesto sovrascriverà i dati appena trasferiti.'))return;
+  _initUI();
+  await pwa('restore_original');
+  pollTimer=setInterval(()=>{
+    pwa('get_progress').then(d=>{
+      if(!d)return;
+      document.getElementById('big-num').textContent=d.pct||0;
+      document.getElementById('big-msg').textContent=d.msg||'';
+      document.getElementById('pfill').style.width=(d.pct||0)+'%';
+      if(d.done){clearInterval(pollTimer);document.getElementById('big-msg').textContent='Ripristino completato ✓';}
+      if(d.error){clearInterval(pollTimer);document.getElementById('transfer-result').innerHTML='<div class="errbox"><div class="err-title">Errore ripristino</div><div class="err-body">'+esc(d.msg||'')+'</div></div>';}
+    });
+  },800);
+}
+
+// ── Reset ─────────────────────────────────────────────────────────────────
+async function resetApp(){
+  try{await pwa('reset')}catch(e){}
+  selDev=null;logLines=[];lastLogCount=0;lastTestCount=0;testResults=[];startTime=null;_pollErrors=0;
+  manualDBPath=null;crypt14Up=false;keyUp=false;mediaUp=false;
+  window._bds=window._ips=window._ms=window._mds=false;
+  if(pollTimer){clearInterval(pollTimer);pollTimer=null}
+  document.getElementById('final-stats').style.display='none';
+  document.getElementById('backup-coverage').style.display='none';
+  document.getElementById('rollback-card').style.display='none';
+  document.getElementById('transfer-result').innerHTML='';
+  document.getElementById('test-list').innerHTML='<div class="tests-empty">In attesa dei test...</div>';
+  document.getElementById('log-body').innerHTML='<div class="ll info"><span class="ll-ts">00:00</span><span class="ll-msg">Pronto.<span class="caret"></span></span></div>';
+  ['upload-status','crypt14-status','key-status','media-status'].forEach(id=>{
+    var el=document.getElementById(id);if(el){el.textContent='nessun file';el.className='upill'}
+  });
+  updateManualBtns();updateTC(0,0,0);
+  document.getElementById('pfill').style.width='0%';
+  document.getElementById('pfill').classList.remove('done','err');
+  document.getElementById('big-num').textContent='0';
+  document.getElementById('big-msg').textContent='Inizializzazione...';
+  document.getElementById('eta-box').style.display='none';
+  document.getElementById('elapsed-val').textContent='00:00';
+  document.getElementById('android-badge').style.display='none';
+  document.getElementById('detail-card').classList.remove('on');
+  document.getElementById('merge-viz').classList.remove('on');
+  document.getElementById('media-viz').classList.remove('on');
+  document.getElementById('sb-safety').classList.remove('on');
+  PHASES.forEach(ph=>{
+    document.getElementById(ph.id).classList.remove('active','done','error');
+    var f=document.getElementById('th-'+ph.th+'-f');if(f)f.style.width='0%';
+    var r=document.getElementById('th-'+ph.th);if(r)r.className='thr';
+  });
+  go(1);
+}
+
+// ── Utils ─────────────────────────────────────────────────────────────────
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+function fmtSec(s){s=Math.round(s);if(s<60)return s+'s';var m=Math.floor(s/60),r=s%60;if(m<60)return m+'m'+(r>0?' '+r+'s':'');return Math.floor(m/60)+'h '+(m%60>0?m%60+'m':'')}
+
+// ── Init ──────────────────────────────────────────────────────────────────
+window.addEventListener('pywebviewready', function(){
+  go(1);
+  checkAdb();
+});
+// Fallback: se pywebview non lancia l'evento (es. browser di sviluppo)
+if(typeof window.pywebview === 'undefined'){
+  document.addEventListener('DOMContentLoaded', function(){go(1);});
+}
+</script>
+</body>
+</html>
