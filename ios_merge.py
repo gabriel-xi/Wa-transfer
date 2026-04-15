@@ -15,6 +15,7 @@ Flusso:
   4. L'utente ripristina il Backup B su iPhone tramite Finder
 """
 
+import hashlib
 import sqlite3
 import shutil
 import plistlib
@@ -23,6 +24,14 @@ from pathlib import Path
 # Domain e percorso relativo di WhatsApp all'interno del backup iOS
 WHATSAPP_DOMAIN = "AppDomainGroup-group.net.whatsapp.WhatsApp.shared"
 WA_DB_RELPATH   = "ChatStorage.sqlite"
+
+# fileID deterministico: SHA1("domain-relativePath") — indipendente dal contenuto
+WA_FILE_ID = hashlib.sha1(
+    (WHATSAPP_DOMAIN + "-" + WA_DB_RELPATH).encode()
+).hexdigest()
+
+# Percorso standard dei backup iOS su macOS
+MOBILESYNC_DIR = Path.home() / "Library" / "Application Support" / "MobileSync" / "Backup"
 
 
 # ─── Logging compatibile con Progress di engine ───────────────────────────────
@@ -54,25 +63,30 @@ def _plog(p, msg: str, level: str = "info") -> None:
 
 def find_wa_db(backup_dir: Path) -> Path:
     """
-    Legge Manifest.db e restituisce il percorso assoluto del file hash
-    corrispondente a ChatStorage.sqlite di WhatsApp.
+    Restituisce il percorso assoluto di ChatStorage.sqlite dentro il backup iOS.
 
-    La struttura di un backup iOS non cifrato è:
-        <backup_dir>/
-            Manifest.db        ← catalogo SQLite
-            Info.plist
-            <ab>/<abcdef...>   ← file con nome = SHA1 hash
+    Il fileID è deterministico: SHA1("domain-relativePath"), indipendente dal
+    contenuto del file. Non serve leggere Manifest.db per trovarlo.
+    Verifichiamo comunque l'esistenza fisica del file.
     """
-    manifest = backup_dir / "Manifest.db"
-    if not manifest.exists():
+    if not (backup_dir / "Manifest.db").exists():
         raise FileNotFoundError(
             f"Manifest.db non trovato in:\n{backup_dir}\n\n"
-            "Seleziona la cartella del backup iOS (deve contenere Manifest.db).\n"
             "Percorso tipico su macOS:\n"
             "~/Library/Application Support/MobileSync/Backup/<UUID>"
         )
 
-    con = sqlite3.connect(str(manifest))
+    path = backup_dir / WA_FILE_ID[:2] / WA_FILE_ID
+    if not path.exists():
+        # Fallback: cerca in Manifest.db (per backup più vecchi con hash diverso)
+        path = _find_wa_db_via_manifest(backup_dir)
+
+    return path
+
+
+def _find_wa_db_via_manifest(backup_dir: Path) -> Path:
+    """Fallback: cerca ChatStorage.sqlite tramite Manifest.db."""
+    con = sqlite3.connect(str(backup_dir / "Manifest.db"))
     try:
         row = con.execute(
             "SELECT fileID FROM Files WHERE domain=? AND relativePath=?",
@@ -93,10 +107,35 @@ def find_wa_db(backup_dir: Path) -> Path:
     path    = backup_dir / file_id[:2] / file_id
     if not path.exists():
         raise FileNotFoundError(
-            f"File hash {file_id[:16]}... non trovato nella cartella backup.\n"
+            f"File hash {file_id[:16]}... non trovato.\n"
             "Il backup potrebbe essere incompleto o corrotto."
         )
     return path
+
+
+def list_backups() -> list:
+    """
+    Scansiona ~/Library/Application Support/MobileSync/Backup/ e
+    restituisce la lista di tutti i backup iOS trovati, ordinata per data
+    (più recente prima). Ogni elemento è il dict di backup_info().
+    """
+    if not MOBILESYNC_DIR.exists():
+        return []
+
+    results = []
+    try:
+        candidates = [d for d in MOBILESYNC_DIR.iterdir() if d.is_dir()]
+    except PermissionError:
+        return []
+
+    for d in candidates:
+        info = backup_info(d)
+        if info.get("valid"):
+            results.append(info)
+
+    # Ordina per data backup (più recente prima)
+    results.sort(key=lambda x: x.get("last_backup", ""), reverse=True)
+    return results
 
 
 def backup_info(backup_dir: Path) -> dict:
@@ -376,30 +415,19 @@ def _merge_db(db_base: Path, db_src: Path, out: Path, p) -> dict:
 
 def _inject(backup_dir: Path, merged_db: Path, p) -> None:
     """
-    Sovrascrive il file hash di ChatStorage.sqlite nel backup iOS
-    con il database fuso.
+    Sovrascrive ChatStorage.sqlite nel backup iOS con il database fuso.
+    Il fileID è SHA1("domain-relativePath") → deterministico, nessuna
+    lettura di Manifest.db necessaria.
     """
     _plog(p, "Reiniezione nel backup B...")
-    manifest = backup_dir / "Manifest.db"
-    con      = sqlite3.connect(str(manifest))
-    try:
-        row = con.execute(
-            "SELECT fileID FROM Files WHERE domain=? AND relativePath=?",
-            (WHATSAPP_DOMAIN, WA_DB_RELPATH),
-        ).fetchone()
-    finally:
-        con.close()
-
-    if not row:
+    dest = backup_dir / WA_FILE_ID[:2] / WA_FILE_ID
+    if not dest.parent.exists():
         raise RuntimeError(
-            "fileID non trovato in Manifest.db del backup B.\n"
-            "Il backup potrebbe essere corrotto."
+            f"Directory hash {WA_FILE_ID[:2]}/ non trovata nel backup B.\n"
+            "Il backup potrebbe essere corrotto o non contenere WhatsApp."
         )
-
-    file_id = row[0]
-    dest    = backup_dir / file_id[:2] / file_id
     shutil.copy2(str(merged_db), str(dest))
-    _plog(p, f"✓ ChatStorage.sqlite aggiornato nel backup B")
+    _plog(p, "✓ ChatStorage.sqlite aggiornato nel backup B")
 
 
 # ─── Pipeline principale (eseguita in thread) ─────────────────────────────────

@@ -16,7 +16,7 @@ from engine import (
     restore_clean_backup, get_clean_backup_info,
     TEMP, SAFETY_BACKUP_DIR,
 )
-from ios_merge import backup_info as ios_backup_info, run_ios_merge
+from ios_merge import backup_info as ios_backup_info, list_backups as ios_list_backups, run_ios_merge
 
 IOS_MERGE_TEMP = TEMP / "ios_merge"
 
@@ -233,6 +233,13 @@ class Api:
 
     # ── iOS merge ────────────────────────────────────────────────────────────
 
+    def list_ios_backups(self) -> list:
+        """
+        Scansiona ~/Library/.../MobileSync/Backup/ e restituisce tutti i
+        backup iOS trovati, ordinati per data (più recente prima).
+        """
+        return ios_list_backups()
+
     def pick_ios_backup(self, slot: str) -> dict:
         """
         Apre dialog per selezionare una cartella backup iOS (slot = 'a' | 'b').
@@ -266,6 +273,30 @@ class Api:
         slots_dir.mkdir(parents=True, exist_ok=True)
         (slots_dir / f"backup_{slot}.txt").write_text(str(backup_dir), encoding="utf-8")
 
+        return {
+            "ok":          True,
+            "path":        str(backup_dir),
+            "device_name": info.get("device_name", "iPhone"),
+            "ios_version": info.get("ios_version", "?"),
+            "last_backup": info.get("last_backup", "?"),
+            "file_count":  info.get("file_count", 0),
+        }
+
+    def select_ios_backup(self, slot: str, path: str) -> dict:
+        """
+        Seleziona un backup iOS per slot ('a'|'b') passando direttamente il path
+        (usato dalla lista auto-discovery, senza dialog).
+        """
+        from pathlib import Path as _Path
+        backup_dir = _Path(path)
+        info = ios_backup_info(backup_dir)
+        if not info.get("valid"):
+            return {"error": "Cartella backup non valida"}
+        if not info.get("has_whatsapp"):
+            return {"error": info.get("wa_error", "WhatsApp non trovato nel backup")}
+        slots_dir = IOS_MERGE_TEMP / "slots"
+        slots_dir.mkdir(parents=True, exist_ok=True)
+        (slots_dir / f"backup_{slot}.txt").write_text(str(backup_dir), encoding="utf-8")
         return {
             "ok":          True,
             "path":        str(backup_dir),

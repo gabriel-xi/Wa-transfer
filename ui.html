@@ -989,21 +989,25 @@ input::placeholder{color:var(--tx4)}
 <div class="panel" id="ip1">
   <div class="eyebrow">iOS ↔ iOS · Step 01 / 03</div>
   <div class="ptitle">Backup <em>A</em> — chat iOS originali</div>
-  <div class="psub">Il backup dell'iPhone che conteneva le tue vecchie chat WhatsApp iOS, effettuato <b>prima</b> di qualsiasi trasferimento da Android.</div>
-  <div class="ibox teal"><span>📂</span>
-    <span>Percorso tipico su macOS:<br>
-    <code>~/Library/Application Support/MobileSync/Backup/&lt;UUID&gt;</code><br>
-    Aprilo in Finder con: <code>Finder → Vai → Vai alla cartella…</code></span>
-  </div>
+  <div class="psub">Il backup con le tue vecchie chat WhatsApp iOS, effettuato <b>prima</b> del trasferimento da Android. Verrà solo letto, mai modificato.</div>
   <div class="card">
-    <div class="card-hd"><div class="card-label">Seleziona cartella Backup A</div></div>
-    <div class="upload-row">
-      <button class="btn btn-ghost" onclick="pickIosBackup('a')">📂 Seleziona cartella</button>
-      <span class="upill" id="ios-pill-a">nessuna cartella</span>
+    <div class="card-hd">
+      <div class="card-label">Backup rilevati — MobileSync</div>
+      <button class="card-action" onclick="loadIosBackupList('a')">↻ Aggiorna</button>
     </div>
-    <div id="ios-info-a"></div>
+    <div id="ios-list-a">
+      <div class="dev-empty"><div style="font-size:28px;animation:blinkAnim 1s infinite">↻</div><div class="dev-empty-txt" style="margin-top:8px">Scansione backup...</div></div>
+    </div>
+    <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--bd)">
+      <div style="font-family:var(--f2);font-size:9px;color:var(--tx4);margin-bottom:8px;letter-spacing:.08em">OPPURE SELEZIONA MANUALMENTE</div>
+      <div class="upload-row">
+        <button class="btn btn-ghost" style="font-size:11px;padding:8px 14px" onclick="pickIosBackup('a')">📂 Scegli cartella…</button>
+        <span class="upill" id="ios-pill-a" style="display:none"></span>
+      </div>
+    </div>
   </div>
-  <div class="ibox blue"><span>ℹ</span><span>Questo backup viene letto ma <b>non modificato</b>.</span></div>
+  <div id="ios-sel-a" style="display:none"></div>
+  <div class="ibox blue"><span>ℹ</span><span>Backup A viene solo letto. <b>Nessuna modifica.</b></span></div>
   <div class="btn-row">
     <button class="btn btn-ghost" onclick="setMode('android')">← Android→iOS</button>
     <button class="btn btn-primary" id="ios-btn-next-a" onclick="iosGo(2)" disabled>Continua →</button>
@@ -1014,20 +1018,28 @@ input::placeholder{color:var(--tx4)}
 <div class="panel" id="ip2">
   <div class="eyebrow">iOS ↔ iOS · Step 02 / 03</div>
   <div class="ptitle">Backup <em>B</em> — dopo Android</div>
-  <div class="psub">Il backup dell'iPhone effettuato <b>dopo</b> il trasferimento ufficiale WhatsApp da Android. Questo backup diventerà la base del merge.</div>
+  <div class="psub">Il backup effettuato <b>dopo</b> il trasferimento ufficiale WhatsApp da Android. Diventerà la base: ChatStorage.sqlite verrà sostituito con la versione fusa.</div>
   <div class="ibox amber"><span>⚠</span>
-    <span>Questo backup <b>verrà modificato</b>: ChatStorage.sqlite sarà sostituito con la versione fusa.<br>
-    Consigliato: tieni una copia della cartella Backup B prima di procedere.</span>
+    <span>Questo backup <b>verrà modificato</b>. Consigliato: duplica la cartella prima di procedere.</span>
   </div>
   <div class="card">
-    <div class="card-hd"><div class="card-label">Seleziona cartella Backup B</div></div>
-    <div class="upload-row">
-      <button class="btn btn-ghost" onclick="pickIosBackup('b')">📂 Seleziona cartella</button>
-      <span class="upill" id="ios-pill-b">nessuna cartella</span>
+    <div class="card-hd">
+      <div class="card-label">Backup rilevati — MobileSync</div>
+      <button class="card-action" onclick="loadIosBackupList('b')">↻ Aggiorna</button>
     </div>
-    <div id="ios-info-b"></div>
+    <div id="ios-list-b">
+      <div class="dev-empty"><div style="font-size:28px;animation:blinkAnim 1s infinite">↻</div><div class="dev-empty-txt" style="margin-top:8px">Scansione backup...</div></div>
+    </div>
+    <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--bd)">
+      <div style="font-family:var(--f2);font-size:9px;color:var(--tx4);margin-bottom:8px;letter-spacing:.08em">OPPURE SELEZIONA MANUALMENTE</div>
+      <div class="upload-row">
+        <button class="btn btn-ghost" style="font-size:11px;padding:8px 14px" onclick="pickIosBackup('b')">📂 Scegli cartella…</button>
+        <span class="upill" id="ios-pill-b" style="display:none"></span>
+      </div>
+    </div>
   </div>
-  <div class="ibox teal"><span>🛡️</span><span>Il merge è reversibile: il tuo Backup A rimane intatto e puoi rifare il backup B in qualsiasi momento.</span></div>
+  <div id="ios-sel-b" style="display:none"></div>
+  <div class="ibox teal"><span>🛡️</span><span>Il Backup A rimane intatto. Puoi rifare il backup B in qualsiasi momento da Finder.</span></div>
   <div class="btn-row">
     <button class="btn btn-ghost" onclick="iosGo(1)">← Indietro</button>
     <button class="btn btn-primary" id="ios-btn-merge" onclick="startIosMerge()" disabled style="background:linear-gradient(135deg,#7EB8FF,#4D94FF)">🔀 Avvia Merge</button>
@@ -1582,6 +1594,8 @@ function setMode(m){
     document.getElementById('ip'+iosStep).classList.add('on');
     document.getElementById('tb-step').textContent=['backup-a','backup-b','merge'][iosStep-1];
     updateIosNav();
+    // Carica lista backup al primo ingresso in modalità iOS
+    if(!window._iosListLoaded){window._iosListLoaded=true;loadIosBackupList('a');loadIosBackupList('b');}
   }
 }
 
@@ -1593,6 +1607,8 @@ function iosGo(n){
   document.getElementById('ip'+n).classList.add('on');
   document.getElementById('tb-step').textContent=['backup-a','backup-b','merge'][n-1];
   updateIosNav();
+  // Ricarica lista se necessario
+  if(n===2){var lb=document.getElementById('ios-list-b');if(lb&&!lb.querySelector('.dev-card'))loadIosBackupList('b');}
 }
 function updateIosNav(){
   [1,2,3].forEach(i=>{
@@ -1604,47 +1620,80 @@ function updateIosNav(){
   });
 }
 
-// ── Backup picker ─────────────────────────────────────────────────────────
+// ── Backup list (auto-discovery) ──────────────────────────────────────────
+async function loadIosBackupList(slot){
+  var listEl=document.getElementById('ios-list-'+slot);
+  listEl.innerHTML='<div class="dev-empty"><div style="font-size:28px;animation:blinkAnim 1s infinite">↻</div><div class="dev-empty-txt" style="margin-top:8px">Scansione MobileSync...</div></div>';
+  var backups=await pwa('list_ios_backups');
+  if(!backups||!backups.length){
+    listEl.innerHTML='<div class="dev-empty"><div class="dev-empty-ico">💾</div><div class="dev-empty-txt">Nessun backup trovato in MobileSync.<br>Controlla che Finder abbia Full Disk Access,<br>oppure usa "Scegli cartella" qui sotto.</div></div>';
+    return;
+  }
+  listEl.innerHTML='';
+  backups.forEach(bk=>{
+    var waTag=bk.has_whatsapp
+      ?'<span style="font-size:9px;color:var(--tl);background:rgba(0,217,160,.08);border:1px solid rgba(0,217,160,.2);padding:2px 8px;border-radius:20px;font-family:var(--f2)">WA ✓</span>'
+      :'<span style="font-size:9px;color:var(--tx4);background:var(--bg2);border:1px solid var(--bd);padding:2px 8px;border-radius:20px;font-family:var(--f2)">no WA</span>';
+    var el=document.createElement('div');
+    el.className='dev-card'+(bk.has_whatsapp?'':' disabled');
+    el.style.opacity=bk.has_whatsapp?'1':'0.45';
+    el.style.cursor=bk.has_whatsapp?'pointer':'default';
+    el.innerHTML=`
+      <div class="dev-ico">💾</div>
+      <div style="flex:1;min-width:0">
+        <div class="dev-name">${esc(bk.device_name||'iPhone')}</div>
+        <div class="dev-meta">iOS ${esc(bk.ios_version||'?')} · ${esc(bk.last_backup||'?')} · ${(bk.file_count||0).toLocaleString()} file</div>
+      </div>
+      ${waTag}
+      <div class="dev-sel-badge">Selezionato</div>`;
+    if(bk.has_whatsapp){
+      el.onclick=()=>selectIosBackup(slot, bk, el);
+    }
+    listEl.appendChild(el);
+  });
+}
+
+function selectIosBackup(slot, bk, el){
+  // Deseleziona tutti nella lista
+  var listEl=document.getElementById('ios-list-'+slot);
+  listEl.querySelectorAll('.dev-card').forEach(c=>c.classList.remove('sel'));
+  el.classList.add('sel');
+  // Aggiorna stato
+  pwa('select_ios_backup', slot, bk.path).then(data=>{
+    _setIosBackup(slot, data||bk);
+  });
+}
+
+// ── Backup picker manuale (folder dialog) ─────────────────────────────────
 async function pickIosBackup(slot){
-  var pill=document.getElementById('ios-pill-'+slot);
-  var info=document.getElementById('ios-info-'+slot);
-  pill.textContent='Selezione...';pill.className='upill wa';
-  info.innerHTML='';
   var data=await pwa('pick_ios_backup',slot);
   if(data&&data.ok){
-    pill.textContent='✓ '+data.device_name;pill.className='upill ok';
-    info.innerHTML=`
-      <div class="ios-bk-grid">
-        <div class="ios-bk-cell">
-          <div class="ios-bk-lbl">Dispositivo</div>
-          <div class="ios-bk-val">${esc(data.device_name)}</div>
-        </div>
-        <div class="ios-bk-cell">
-          <div class="ios-bk-lbl">iOS</div>
-          <div class="ios-bk-val">${esc(data.ios_version)}</div>
-        </div>
-        <div class="ios-bk-cell">
-          <div class="ios-bk-lbl">Data backup</div>
-          <div class="ios-bk-val">${esc(data.last_backup)}</div>
-        </div>
-        <div class="ios-bk-cell">
-          <div class="ios-bk-lbl">WhatsApp</div>
-          <div class="ios-bk-val" style="color:var(--tl)">✓ trovato</div>
-        </div>
-      </div>`;
-    if(slot==='a')iosBackupA=data;else iosBackupB=data;
+    _setIosBackup(slot,data);
   } else {
-    var msg=(data&&data.error)||'Annullato';
-    if(msg==='Nessuna cartella selezionata'){
-      pill.textContent='nessuna cartella';pill.className='upill';
-    } else {
-      pill.textContent='✗ Errore';pill.className='upill er';
-      info.innerHTML=`<div class="ibox amber" style="margin-top:8px"><span>⚠</span><span>${esc(msg)}</span></div>`;
+    var msg=(data&&data.error)||'';
+    if(msg&&msg!=='Nessuna cartella selezionata'){
+      var selEl=document.getElementById('ios-sel-'+slot);
+      if(selEl){selEl.style.display='block';selEl.innerHTML=`<div class="ibox amber"><span>⚠</span><span>${esc(msg)}</span></div>`;}
     }
-    if(slot==='a')iosBackupA=null;else iosBackupB=null;
+  }
+}
+
+function _setIosBackup(slot, data){
+  if(!data||!data.ok)return;
+  if(slot==='a')iosBackupA=data;else iosBackupB=data;
+  var selEl=document.getElementById('ios-sel-'+slot);
+  if(selEl){
+    selEl.style.display='block';
+    selEl.innerHTML=`<div class="ios-bk-grid" style="margin-bottom:4px">
+      <div class="ios-bk-cell"><div class="ios-bk-lbl">Dispositivo</div><div class="ios-bk-val">${esc(data.device_name)}</div></div>
+      <div class="ios-bk-cell"><div class="ios-bk-lbl">iOS</div><div class="ios-bk-val">${esc(data.ios_version)}</div></div>
+      <div class="ios-bk-cell"><div class="ios-bk-lbl">Data backup</div><div class="ios-bk-val">${esc(data.last_backup)}</div></div>
+      <div class="ios-bk-cell"><div class="ios-bk-lbl">WhatsApp</div><div class="ios-bk-val" style="color:var(--tl)">✓</div></div>
+    </div>`;
   }
   updateIosBtns();
 }
+
 function updateIosBtns(){
   var btnA=document.getElementById('ios-btn-next-a');
   var btnB=document.getElementById('ios-btn-merge');
@@ -1730,12 +1779,13 @@ function renderIosLog(){
 async function iosResetMerge(){
   try{await pwa('reset_ios_merge')}catch(e){}
   iosBackupA=null;iosBackupB=null;iosLogLines=[];iosLastLog=0;
+  window._iosListLoaded=false;
   if(iosPollTimer){clearInterval(iosPollTimer);iosPollTimer=null;}
   ['a','b'].forEach(s=>{
-    var pill=document.getElementById('ios-pill-'+s);
-    var info=document.getElementById('ios-info-'+s);
-    if(pill){pill.textContent='nessuna cartella';pill.className='upill';}
-    if(info)info.innerHTML='';
+    var sel=document.getElementById('ios-sel-'+s);
+    if(sel){sel.style.display='none';sel.innerHTML='';}
+    var listEl=document.getElementById('ios-list-'+s);
+    if(listEl)listEl.innerHTML='<div class="dev-empty"><div class="dev-empty-ico">💾</div><div class="dev-empty-txt">Premi ↻ per scansionare</div></div>';
   });
   updateIosBtns();
   iosStep=1;iosGo(1);
