@@ -205,6 +205,33 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 .btn-danger:hover{background:rgba(255,77,109,.14);border-color:rgba(255,77,109,.35)}
 .btn-row{display:flex;gap:10px;margin-top:24px;align-items:center;flex-wrap:wrap}
 
+/* ── Mode switcher (Android→iOS / iOS↔iOS) ────────────────────────────────── */
+.mode-sw{display:flex;gap:4px;padding:10px 24px;border-bottom:1px solid var(--bd);flex-shrink:0}
+.msb{flex:1;padding:7px 0;border-radius:6px;border:1px solid var(--bd);font-family:var(--f2);
+  font-size:9px;letter-spacing:.05em;color:var(--tx3);background:none;cursor:pointer;transition:all .2s}
+.msb.active{background:var(--tl3);border-color:rgba(0,217,160,.25);color:var(--tl)}
+.msb:hover:not(.active){background:rgba(255,255,255,.03);color:var(--tx2)}
+
+/* ── iOS backup card ──────────────────────────────────────────────────────── */
+.ios-bk-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+.ios-bk-cell{background:var(--bg2);border:1px solid var(--bd);border-radius:var(--r);padding:12px 14px}
+.ios-bk-lbl{font-family:var(--f2);font-size:8px;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--tx3);margin-bottom:4px}
+.ios-bk-val{font-size:13px;font-weight:600}
+
+/* ── iOS merge progress ───────────────────────────────────────────────────── */
+.ios-prog{background:var(--bg1);border:1px solid var(--bd);border-radius:var(--r3);
+  padding:22px 26px;margin-bottom:14px}
+.ios-pct{font-size:48px;font-weight:800;letter-spacing:-.04em;font-family:var(--f2);
+  color:var(--tl);line-height:1}
+.ios-pct .punit{font-size:20px;color:var(--tx3)}
+.ios-msg{font-size:13px;color:var(--tx2);margin:8px 0 14px;font-weight:400}
+.ios-track{height:4px;background:rgba(255,255,255,.06);border-radius:4px;overflow:hidden}
+.ios-fill{height:100%;width:0%;background:linear-gradient(90deg,var(--tl2),var(--tl));
+  border-radius:4px;transition:width .8s cubic-bezier(.4,0,.2,1)}
+.ios-fill.done{background:var(--tl2)}
+.ios-fill.err{background:var(--er)}
+
 /* ── Devices list ─────────────────────────────────────────────────────────── */
 .dev-list{display:flex;flex-direction:column;gap:8px}
 .dev-card{display:flex;align-items:center;gap:14px;padding:16px 18px;
@@ -588,11 +615,15 @@ input::placeholder{color:var(--tx4)}
     </div>
     <div class="logo-sub">Android → iOS · macOS · Auto</div>
   </div>
+  <div class="mode-sw">
+    <button class="msb active" id="ms-android" onclick="setMode('android')">Android → iOS</button>
+    <button class="msb" id="ms-ios" onclick="setMode('ios')">iOS ↔ iOS</button>
+  </div>
   <div class="sb-status">
     <div class="pulse" id="pulse"></div>
     <div class="stxt" id="sb-stxt">Inizializzazione...</div>
   </div>
-  <nav class="sb-nav">
+  <nav class="sb-nav" id="nav-android">
     <div class="nav-lbl">Pipeline</div>
     <div class="step-item active" id="nav-1" onclick="navClick(1)">
       <div class="step-num"><span>1</span></div>
@@ -615,7 +646,25 @@ input::placeholder{color:var(--tx4)}
       <div class="step-txt"><div class="step-name">Completato</div><div class="step-desc">Resoconto finale</div></div>
     </div>
   </nav>
-  <div class="sb-threads">
+
+  <!-- ── iOS merge nav (nascosto di default) ─────────────────────────────── -->
+  <nav class="sb-nav" id="nav-ios" style="display:none">
+    <div class="nav-lbl">iOS ↔ iOS</div>
+    <div class="step-item active" id="inav-1" onclick="iosNavClick(1)">
+      <div class="step-num"><span>1</span></div>
+      <div class="step-txt"><div class="step-name">Backup A</div><div class="step-desc">Chat iOS originali</div></div>
+    </div>
+    <div class="step-item" id="inav-2" onclick="iosNavClick(2)">
+      <div class="step-num"><span>2</span></div>
+      <div class="step-txt"><div class="step-name">Backup B</div><div class="step-desc">Dopo Android</div></div>
+    </div>
+    <div class="step-item" id="inav-3" onclick="iosNavClick(3)">
+      <div class="step-num"><span>3</span></div>
+      <div class="step-txt"><div class="step-name">Merge</div><div class="step-desc">Unione database</div></div>
+    </div>
+  </nav>
+
+  <div class="sb-threads" id="sb-threads">
     <div class="threads-lbl">Threads</div>
     <div class="thr" id="th-extract"><div class="thr-dot"></div><div class="thr-bar"><div class="thr-fill" id="th-extract-f"></div></div><div class="thr-name">extract</div></div>
     <div class="thr" id="th-convert"><div class="thr-dot"></div><div class="thr-bar"><div class="thr-fill" id="th-convert-f"></div></div><div class="thr-name">convert</div></div>
@@ -934,6 +983,85 @@ input::placeholder{color:var(--tx4)}
   <div class="ibox teal"><span>💡</span><span>I media vengono indicizzati da WhatsApp gradualmente nelle prime ore.</span></div>
   <div class="ibox teal"><span>🛡️</span><span>Backup DB originale in <code>temp/safety_backups/</code> · Copia backup completa in <code>temp/clean_backup/</code></span></div>
   <div class="btn-row"><button class="btn btn-ghost" onclick="resetApp()">↺ Nuovo trasferimento</button></div>
+</div>
+
+<!-- ══ iOS MERGE — STEP 1: Backup A ══ -->
+<div class="panel" id="ip1">
+  <div class="eyebrow">iOS ↔ iOS · Step 01 / 03</div>
+  <div class="ptitle">Backup <em>A</em> — chat iOS originali</div>
+  <div class="psub">Il backup dell'iPhone che conteneva le tue vecchie chat WhatsApp iOS, effettuato <b>prima</b> di qualsiasi trasferimento da Android.</div>
+  <div class="ibox teal"><span>📂</span>
+    <span>Percorso tipico su macOS:<br>
+    <code>~/Library/Application Support/MobileSync/Backup/&lt;UUID&gt;</code><br>
+    Aprilo in Finder con: <code>Finder → Vai → Vai alla cartella…</code></span>
+  </div>
+  <div class="card">
+    <div class="card-hd"><div class="card-label">Seleziona cartella Backup A</div></div>
+    <div class="upload-row">
+      <button class="btn btn-ghost" onclick="pickIosBackup('a')">📂 Seleziona cartella</button>
+      <span class="upill" id="ios-pill-a">nessuna cartella</span>
+    </div>
+    <div id="ios-info-a"></div>
+  </div>
+  <div class="ibox blue"><span>ℹ</span><span>Questo backup viene letto ma <b>non modificato</b>.</span></div>
+  <div class="btn-row">
+    <button class="btn btn-ghost" onclick="setMode('android')">← Android→iOS</button>
+    <button class="btn btn-primary" id="ios-btn-next-a" onclick="iosGo(2)" disabled>Continua →</button>
+  </div>
+</div>
+
+<!-- ══ iOS MERGE — STEP 2: Backup B ══ -->
+<div class="panel" id="ip2">
+  <div class="eyebrow">iOS ↔ iOS · Step 02 / 03</div>
+  <div class="ptitle">Backup <em>B</em> — dopo Android</div>
+  <div class="psub">Il backup dell'iPhone effettuato <b>dopo</b> il trasferimento ufficiale WhatsApp da Android. Questo backup diventerà la base del merge.</div>
+  <div class="ibox amber"><span>⚠</span>
+    <span>Questo backup <b>verrà modificato</b>: ChatStorage.sqlite sarà sostituito con la versione fusa.<br>
+    Consigliato: tieni una copia della cartella Backup B prima di procedere.</span>
+  </div>
+  <div class="card">
+    <div class="card-hd"><div class="card-label">Seleziona cartella Backup B</div></div>
+    <div class="upload-row">
+      <button class="btn btn-ghost" onclick="pickIosBackup('b')">📂 Seleziona cartella</button>
+      <span class="upill" id="ios-pill-b">nessuna cartella</span>
+    </div>
+    <div id="ios-info-b"></div>
+  </div>
+  <div class="ibox teal"><span>🛡️</span><span>Il merge è reversibile: il tuo Backup A rimane intatto e puoi rifare il backup B in qualsiasi momento.</span></div>
+  <div class="btn-row">
+    <button class="btn btn-ghost" onclick="iosGo(1)">← Indietro</button>
+    <button class="btn btn-primary" id="ios-btn-merge" onclick="startIosMerge()" disabled style="background:linear-gradient(135deg,#7EB8FF,#4D94FF)">🔀 Avvia Merge</button>
+  </div>
+</div>
+
+<!-- ══ iOS MERGE — STEP 3: Merge in corso / completato ══ -->
+<div class="panel" id="ip3">
+  <div class="eyebrow">iOS ↔ iOS · Step 03 / 03</div>
+  <div class="ptitle" id="ios-title">Merge <em>in corso</em>...</div>
+  <div class="psub">I messaggi del Backup A vengono fusi nel Backup B. Deduplicazione automatica per STANZA ID.</div>
+
+  <div class="ios-prog">
+    <div style="display:flex;align-items:baseline;gap:8px">
+      <div class="ios-pct"><span id="ios-big-num">0</span><span class="punit">%</span></div>
+      <div id="ios-big-msg" style="font-size:12px;color:var(--tx2);font-family:var(--f2)">Inizializzazione...</div>
+    </div>
+    <div class="ios-track" style="margin-top:16px"><div class="ios-fill" id="ios-pfill"></div></div>
+  </div>
+
+  <div class="term-wrap">
+    <div class="term">
+      <div class="term-hd">
+        <div class="term-dots"><div class="term-dot"></div><div class="term-dot"></div><div class="term-dot"></div></div>
+        <div class="term-title">ios-merge — log</div>
+        <div class="term-live" id="ios-tlive">LIVE</div>
+      </div>
+      <div class="term-body" id="ios-log-body">
+        <div class="ll info"><span class="ll-ts">00:00</span><span class="ll-msg">Pronto.<span class="caret"></span></span></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="ios-result"></div>
 </div>
 
   </div><!-- /content -->
@@ -1424,6 +1552,194 @@ async function resetApp(){
 // ── Utils ─────────────────────────────────────────────────────────────────
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
 function fmtSec(s){s=Math.round(s);if(s<60)return s+'s';var m=Math.floor(s/60),r=s%60;if(m<60)return m+'m'+(r>0?' '+r+'s':'');return Math.floor(m/60)+'h '+(m%60>0?m%60+'m':'')}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// iOS ↔ iOS MERGE MODE
+// ══════════════════════════════════════════════════════════════════════════════
+
+let appMode='android',iosStep=1,iosBackupA=null,iosBackupB=null,iosPollTimer=null;
+let iosLogLines=[],iosLastLog=0;
+
+// ── Mode switcher ─────────────────────────────────────────────────────────
+function setMode(m){
+  appMode=m;
+  ['android','ios'].forEach(x=>{
+    var el=document.getElementById('ms-'+x);
+    if(el)el.classList.toggle('active',x===m);
+  });
+  var navA=document.getElementById('nav-android'),navI=document.getElementById('nav-ios');
+  var thr=document.getElementById('sb-threads');
+  if(navA)navA.style.display=m==='android'?'':'none';
+  if(navI)navI.style.display=m==='ios'?'':'none';
+  if(thr)thr.style.display=m==='android'?'':'none';
+
+  // Nascondi tutti i panel, mostra il corretto
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'));
+  if(m==='android'){
+    document.getElementById('p'+step).classList.add('on');
+    document.getElementById('tb-step').textContent=LABELS[step-1];
+  } else {
+    document.getElementById('ip'+iosStep).classList.add('on');
+    document.getElementById('tb-step').textContent=['backup-a','backup-b','merge'][iosStep-1];
+    updateIosNav();
+  }
+}
+
+// ── iOS nav ───────────────────────────────────────────────────────────────
+function iosNavClick(n){if(n<=iosStep)iosGo(n)}
+function iosGo(n){
+  iosStep=n;
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'));
+  document.getElementById('ip'+n).classList.add('on');
+  document.getElementById('tb-step').textContent=['backup-a','backup-b','merge'][n-1];
+  updateIosNav();
+}
+function updateIosNav(){
+  [1,2,3].forEach(i=>{
+    var el=document.getElementById('inav-'+i);
+    if(!el)return;
+    el.classList.remove('active','done');
+    if(i<iosStep)el.classList.add('done');
+    else if(i===iosStep)el.classList.add('active');
+  });
+}
+
+// ── Backup picker ─────────────────────────────────────────────────────────
+async function pickIosBackup(slot){
+  var pill=document.getElementById('ios-pill-'+slot);
+  var info=document.getElementById('ios-info-'+slot);
+  pill.textContent='Selezione...';pill.className='upill wa';
+  info.innerHTML='';
+  var data=await pwa('pick_ios_backup',slot);
+  if(data&&data.ok){
+    pill.textContent='✓ '+data.device_name;pill.className='upill ok';
+    info.innerHTML=`
+      <div class="ios-bk-grid">
+        <div class="ios-bk-cell">
+          <div class="ios-bk-lbl">Dispositivo</div>
+          <div class="ios-bk-val">${esc(data.device_name)}</div>
+        </div>
+        <div class="ios-bk-cell">
+          <div class="ios-bk-lbl">iOS</div>
+          <div class="ios-bk-val">${esc(data.ios_version)}</div>
+        </div>
+        <div class="ios-bk-cell">
+          <div class="ios-bk-lbl">Data backup</div>
+          <div class="ios-bk-val">${esc(data.last_backup)}</div>
+        </div>
+        <div class="ios-bk-cell">
+          <div class="ios-bk-lbl">WhatsApp</div>
+          <div class="ios-bk-val" style="color:var(--tl)">✓ trovato</div>
+        </div>
+      </div>`;
+    if(slot==='a')iosBackupA=data;else iosBackupB=data;
+  } else {
+    var msg=(data&&data.error)||'Annullato';
+    if(msg==='Nessuna cartella selezionata'){
+      pill.textContent='nessuna cartella';pill.className='upill';
+    } else {
+      pill.textContent='✗ Errore';pill.className='upill er';
+      info.innerHTML=`<div class="ibox amber" style="margin-top:8px"><span>⚠</span><span>${esc(msg)}</span></div>`;
+    }
+    if(slot==='a')iosBackupA=null;else iosBackupB=null;
+  }
+  updateIosBtns();
+}
+function updateIosBtns(){
+  var btnA=document.getElementById('ios-btn-next-a');
+  var btnB=document.getElementById('ios-btn-merge');
+  if(btnA)btnA.disabled=!iosBackupA;
+  if(btnB)btnB.disabled=!(iosBackupA&&iosBackupB);
+}
+
+// ── Merge pipeline ────────────────────────────────────────────────────────
+async function startIosMerge(){
+  if(!iosBackupA||!iosBackupB)return;
+  iosGo(3);
+  // Reset UI
+  var title=document.getElementById('ios-title');
+  if(title)title.innerHTML='Merge <em>in corso</em>...';
+  document.getElementById('ios-log-body').innerHTML='<div class="ll info"><span class="ll-ts">00:00</span><span class="ll-msg">Avvio...<span class="caret"></span></span></div>';
+  document.getElementById('ios-pfill').style.width='0%';
+  document.getElementById('ios-pfill').className='ios-fill';
+  document.getElementById('ios-big-num').textContent='0';
+  document.getElementById('ios-big-msg').textContent='Inizializzazione...';
+  document.getElementById('ios-result').innerHTML='';
+  var tlive=document.getElementById('ios-tlive');if(tlive)tlive.classList.add('on');
+  iosLogLines=[];iosLastLog=0;startTime=Date.now();
+  await pwa('start_ios_merge');
+  if(iosPollTimer)clearInterval(iosPollTimer);
+  iosPollTimer=setInterval(iosPoll,500);
+}
+
+async function iosPoll(){
+  var d=await pwa('get_progress');
+  if(!d)return;
+  var pct=d.pct||0;
+  document.getElementById('ios-big-num').textContent=pct;
+  document.getElementById('ios-big-msg').textContent=d.msg||'';
+  var fill=document.getElementById('ios-pfill');
+  fill.style.width=pct+'%';
+  fill.className='ios-fill'+(d.done?' done':d.error?' err':'');
+  // Log
+  if(d.log&&d.log.length>iosLastLog){
+    d.log.slice(iosLastLog).forEach(l=>{
+      if(!['pass','warn','fail','skip'].includes(l.type)){
+        var t=l.type||(l.msg.includes('ERRORE')?'fail':l.msg.includes('✓')?'ok':l.msg.includes('⚠')?'wa':'info');
+        iosLogLines.push({msg:l.msg,type:t,ts:elapsed()});
+      }
+    });
+    iosLastLog=d.log.length;
+    renderIosLog();
+  }
+  if(d.error){
+    clearInterval(iosPollTimer);
+    var tlive=document.getElementById('ios-tlive');if(tlive)tlive.classList.remove('on');
+    document.getElementById('ios-result').innerHTML=
+      '<div class="errbox"><div class="err-title">✗ Errore</div><div class="err-body">'+esc(d.msg||'')+'</div>'+
+      '<div class="btn-row"><button class="btn btn-ghost" onclick="iosGo(1)">← Ricomincia</button></div></div>';
+  }
+  if(d.done){
+    clearInterval(iosPollTimer);
+    var tlive=document.getElementById('ios-tlive');if(tlive)tlive.classList.remove('on');
+    var ms=d.data&&d.data.ios_merge_stats||{};
+    var title=document.getElementById('ios-title');
+    if(title)title.innerHTML='Merge <em>completato</em> ✓';
+    document.getElementById('ios-result').innerHTML=`
+      <div class="ibox teal" style="margin-top:4px"><span>✓</span>
+        <span><b>+${(ms.inserted||0).toLocaleString('it-IT')}</b> messaggi aggiunti &nbsp;·&nbsp;
+              <b>${ms.new_chats||0}</b> nuove chat &nbsp;·&nbsp;
+              Totale: <b>${(ms.msg_after||0).toLocaleString('it-IT')}</b> messaggi</span></div>
+      <div class="card" style="margin-top:12px;border-color:rgba(126,184,255,.15)">
+        <div class="card-hd"><div class="card-label" style="color:var(--bl)">Prossimi passi</div></div>
+        <div class="next-step"><div class="ns-num">1</div><div class="ns-txt">Apri <b>Finder</b> → seleziona il tuo iPhone nella sidebar</div></div>
+        <div class="next-step"><div class="ns-num">2</div><div class="ns-txt">Clicca <b>"Ripristina backup"</b> → scegli il <b>Backup B</b> (appena aggiornato)</div></div>
+        <div class="next-step"><div class="ns-num">3</div><div class="ns-txt">Attendi il ripristino e il riavvio dell'iPhone</div></div>
+        <div class="next-step"><div class="ns-num">4</div><div class="ns-txt">Apri WhatsApp → tutte le chat saranno presenti ✓</div></div>
+      </div>
+      <div class="btn-row"><button class="btn btn-ghost" onclick="iosResetMerge()">↺ Nuovo merge</button></div>`;
+  }
+}
+function renderIosLog(){
+  var b=document.getElementById('ios-log-body');
+  b.innerHTML=iosLogLines.map((l,i)=>
+    `<div class="ll ${l.type}" style="animation-delay:${Math.min(i*8,150)}ms"><span class="ll-ts">${l.ts}</span><span class="ll-msg">${esc(l.msg)}</span></div>`
+  ).join('')+'<div class="ll"><span class="ll-ts">&nbsp;</span><span class="ll-msg"><span class="caret"></span></span></div>';
+  b.scrollTop=b.scrollHeight;
+}
+async function iosResetMerge(){
+  try{await pwa('reset_ios_merge')}catch(e){}
+  iosBackupA=null;iosBackupB=null;iosLogLines=[];iosLastLog=0;
+  if(iosPollTimer){clearInterval(iosPollTimer);iosPollTimer=null;}
+  ['a','b'].forEach(s=>{
+    var pill=document.getElementById('ios-pill-'+s);
+    var info=document.getElementById('ios-info-'+s);
+    if(pill){pill.textContent='nessuna cartella';pill.className='upill';}
+    if(info)info.innerHTML='';
+  });
+  updateIosBtns();
+  iosStep=1;iosGo(1);
+}
 
 // ── Init ──────────────────────────────────────────────────────────────────
 window.addEventListener('pywebviewready', function(){

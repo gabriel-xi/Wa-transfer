@@ -16,6 +16,9 @@ from engine import (
     restore_clean_backup, get_clean_backup_info,
     TEMP, SAFETY_BACKUP_DIR,
 )
+from ios_merge import backup_info as ios_backup_info, run_ios_merge
+
+IOS_MERGE_TEMP = TEMP / "ios_merge"
 
 # ── Progress globale ──────────────────────────────────────────────────────────
 
@@ -227,6 +230,81 @@ class Api:
         p = Progress(); _set_progress(p)
         threading.Thread(target=restore_clean_backup, args=(p,), daemon=True).start()
         return {"started": True}
+
+    # ── iOS merge ────────────────────────────────────────────────────────────
+
+    def pick_ios_backup(self, slot: str) -> dict:
+        """
+        Apre dialog per selezionare una cartella backup iOS (slot = 'a' | 'b').
+        Verifica che contenga Manifest.db e ChatStorage.sqlite di WhatsApp.
+        """
+        if not self._window:
+            return {"error": "Finestra non disponibile"}
+        paths = self._window.create_file_dialog(
+            webview.FOLDER_DIALOG,
+            allow_multiple=False,
+        )
+        if not paths:
+            return {"error": "Nessuna cartella selezionata"}
+
+        backup_dir = Path(paths[0])
+        info = ios_backup_info(backup_dir)
+
+        if not info.get("valid"):
+            return {
+                "error": (
+                    "Cartella non valida: Manifest.db non trovato.\n"
+                    "Percorso tipico: ~/Library/Application Support/MobileSync/Backup/<UUID>"
+                )
+            }
+
+        if not info.get("has_whatsapp"):
+            return {"error": info.get("wa_error", "WhatsApp non trovato nel backup")}
+
+        # Salva il percorso per start_ios_merge
+        slots_dir = IOS_MERGE_TEMP / "slots"
+        slots_dir.mkdir(parents=True, exist_ok=True)
+        (slots_dir / f"backup_{slot}.txt").write_text(str(backup_dir), encoding="utf-8")
+
+        return {
+            "ok":          True,
+            "path":        str(backup_dir),
+            "device_name": info.get("device_name", "iPhone"),
+            "ios_version": info.get("ios_version", "?"),
+            "last_backup": info.get("last_backup", "?"),
+            "file_count":  info.get("file_count", 0),
+        }
+
+    def start_ios_merge(self) -> dict:
+        """Pipeline merge iOS↔iOS: fonde ChatStorage.sqlite di A in B."""
+        slots_dir = IOS_MERGE_TEMP / "slots"
+        file_a    = slots_dir / "backup_a.txt"
+        file_b    = slots_dir / "backup_b.txt"
+
+        if not file_a.exists():
+            return {"error": "Backup A non selezionato"}
+        if not file_b.exists():
+            return {"error": "Backup B non selezionato"}
+
+        backup_a = file_a.read_text(encoding="utf-8").strip()
+        backup_b = file_b.read_text(encoding="utf-8").strip()
+
+        p = Progress()
+        _set_progress(p)
+        threading.Thread(
+            target=run_ios_merge,
+            args=(backup_a, backup_b, p, IOS_MERGE_TEMP),
+            daemon=True,
+        ).start()
+        return {"started": True}
+
+    def reset_ios_merge(self) -> dict:
+        """Cancella lo stato del merge iOS (selezioni backup)."""
+        slots_dir = IOS_MERGE_TEMP / "slots"
+        if slots_dir.exists():
+            shutil.rmtree(slots_dir, ignore_errors=True)
+        _set_progress(Progress())
+        return {"ok": True}
 
     # ── Utility ──────────────────────────────────────────────────────────────
 
