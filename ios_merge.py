@@ -204,6 +204,7 @@ def _merge_db(db_base: Path, db_src: Path, out: Path, p) -> dict:
     - Z_PRIMARYKEY aggiornata per CoreData
     """
     _plog(p, "Copia database base (Backup B)...")
+    out.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy2(str(db_base), str(out))
 
     dst = sqlite3.connect(str(out))
